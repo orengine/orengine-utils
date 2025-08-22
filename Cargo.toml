@@ -1,6 +1,6 @@
 [package]
 name = "orengine-utils"
-version = "1.0.1"
+version = "1.0.2"
 edition = "2021"
 description = "This repository provides utilities for building high-performance applications."
 repository = "https://github.com/orengine/parcoll"

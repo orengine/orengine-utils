@@ -56,7 +56,7 @@ macro_rules! generate_cache_padded_atomic {
                 [u8; if size_of::<$atomic>() > $crate::cache_padded::ALIGN {
                     0
                 } else {
-                    ALIGN - size_of::<$atomic>()
+                    $crate::cache_padded::ALIGN - size_of::<$atomic>()
                 }],
             >,
         }
