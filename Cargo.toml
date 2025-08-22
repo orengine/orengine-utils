@@ -1,0 +1,15 @@
+[package]
+name = "orengine-utils"
+version = "1.0.0"
+edition = "2021"
+description = "This repository provides utilities for building high-performance applications."
+repository = "https://github.com/orengine/parcoll"
+license = "MIT"
+keywords = ["utils", "concurrency", "performance", "hints", "cache-padded"]
+categories = ["concurrency"]
+authors = ["Eugene Usachev <https://github.com/Eugene-Usachev> and orengine contributors <team@orengine>"]
+readme = "README.md"
+rust-version = "1.83.0"
+
+[dependencies]
+libc = "1.0.0-alpha.1"
