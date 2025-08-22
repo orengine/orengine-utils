@@ -1,0 +1,22 @@
+name: test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  x86:
+    name: x86_64 (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust + Clippy
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+          toolchain: 1.83.0
+      - name: Clippy (x86)
+        run: cargo clippy --all-targets --all-features -- -D warnings
+      - name: Test (x86)
+        run: cargo test --all-targets --all-features -- --test-threads=1
