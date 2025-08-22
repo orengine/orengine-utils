@@ -3,9 +3,6 @@ use std::sync::atomic::{
     AtomicI16, AtomicI32, AtomicI64, AtomicI8, AtomicIsize, AtomicU16, AtomicU32, AtomicU64,
     AtomicU8, AtomicUsize,
 };
-use core::ops::Deref;
-use std::mem::MaybeUninit;
-use std::ops::DerefMut;
 
 #[cfg(any(
     target_arch = "x86_64",
@@ -55,8 +52,8 @@ macro_rules! generate_cache_padded_atomic {
         /// Cache padded atomic. Can be dereferenced to the inner atomic.
         pub struct $name {
             atomic: $atomic,
-            _align: MaybeUninit<
-                [u8; if size_of::<$atomic>() > ALIGN {
+            _align: std::mem::MaybeUninit<
+                [u8; if size_of::<$atomic>() > $crate::cache_padded::ALIGN {
                     0
                 } else {
                     ALIGN - size_of::<$atomic>()
@@ -69,12 +66,12 @@ macro_rules! generate_cache_padded_atomic {
             pub const fn new() -> Self {
                 Self {
                     atomic: $atomic::new(0),
-                    _align: MaybeUninit::uninit(),
+                    _align: std::mem::MaybeUninit::uninit(),
                 }
             }
         }
 
-        impl Deref for $name {
+        impl std::ops::Deref for $name {
             type Target = $atomic;
 
             fn deref(&self) -> &Self::Target {
@@ -82,7 +79,7 @@ macro_rules! generate_cache_padded_atomic {
             }
         }
 
-        impl DerefMut for $name {
+        impl std::ops::DerefMut for $name {
             fn deref_mut(&mut self) -> &mut Self::Target {
                 &mut self.atomic
             }
