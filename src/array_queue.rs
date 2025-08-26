@@ -172,7 +172,7 @@ impl<T, const N: usize> ArrayQueue<T, N> {
             }
         }
 
-        impl<'array_queue, T, const N: usize> ExactSizeIterator for Iter<'array_queue, T, N> {
+        impl<T, const N: usize> ExactSizeIterator for Iter<'_, T, N> {
             fn len(&self) -> usize {
                 self.queue.len
             }
@@ -211,7 +211,7 @@ impl<T, const N: usize> ArrayQueue<T, N> {
             }
         }
 
-        impl<'array_queue, T, const N: usize> ExactSizeIterator for IterMut<'array_queue, T, N> {
+        impl<T, const N: usize> ExactSizeIterator for IterMut<'_, T, N> {
             fn len(&self) -> usize {
                 self.queue.len
             }
