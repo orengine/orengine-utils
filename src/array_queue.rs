@@ -1,6 +1,6 @@
 //! This module contains the [`ArrayQueue`].
 use crate::hints::{assert_hint, likely, unlikely};
-use std::mem::{ManuallyDrop, MaybeUninit};
+use std::mem::MaybeUninit;
 use std::ops::{Deref, DerefMut};
 use std::{mem, ptr};
 
@@ -21,7 +21,7 @@ use std::{mem, ptr};
 /// assert_eq!(queue.pop(), None);
 /// ```
 pub struct ArrayQueue<T, const N: usize> {
-    array: ManuallyDrop<[T; N]>,
+    array: [MaybeUninit<T>; N],
     len: usize,
     head: usize,
 }
@@ -35,7 +35,7 @@ impl<T, const N: usize> ArrayQueue<T, N> {
         )]
         {
             Self {
-                array: ManuallyDrop::new(unsafe { MaybeUninit::uninit().assume_init() }),
+                array: [const { MaybeUninit::uninit() }; N],
                 len: 0,
                 head: 0,
             }
@@ -81,7 +81,7 @@ impl<T, const N: usize> ArrayQueue<T, N> {
 
         let idx = self.to_physical_idx(self.len());
 
-        unsafe { ptr::write(self.array.get_unchecked_mut(idx), value) };
+        unsafe { ptr::write(self.array.get_unchecked_mut(idx), MaybeUninit::new(value)) };
 
         self.len += 1;
     }
@@ -110,7 +110,7 @@ impl<T, const N: usize> ArrayQueue<T, N> {
                 &format!("idx: {}, len: {}", idx, self.array.len()),
             );
 
-            Some(unsafe { ptr::read(self.array.get_unchecked_mut(idx)) })
+            Some(unsafe { self.array.get_unchecked_mut(idx).assume_init_read() })
         } else {
             None
         }
@@ -137,7 +137,7 @@ impl<T, const N: usize> ArrayQueue<T, N> {
         for i in 0..self.len {
             let idx = self.to_physical_idx(i);
 
-            let value = unsafe { ptr::read(self.array.get_unchecked_mut(idx)) };
+            let value = unsafe { self.array.get_unchecked_mut(idx).assume_init_read() };
 
             f(value);
         }
@@ -161,7 +161,7 @@ impl<T, const N: usize> ArrayQueue<T, N> {
 
                     self.iterated += 1;
 
-                    Some(unsafe { self.queue.array.get_unchecked(idx) })
+                    Some(unsafe { self.queue.array.get_unchecked(idx).assume_init_ref() })
                 } else {
                     None
                 }
@@ -200,7 +200,7 @@ impl<T, const N: usize> ArrayQueue<T, N> {
 
                     self.iterated += 1;
 
-                    Some(unsafe { &mut *(self.queue.array.get_unchecked_mut(idx) as *mut T) })
+                    Some(unsafe { &mut *(self.queue.array.get_unchecked_mut(idx) as *mut _ as *mut T) })
                 } else {
                     None
                 }
@@ -228,13 +228,20 @@ impl<T, const N: usize> ArrayQueue<T, N> {
     /// # Safety
     ///
     /// The caller must ensure that the queue is empty before refilling.
-    pub unsafe fn refill_with(&mut self, f: impl FnOnce(&mut [T; N]) -> usize) {
+    pub unsafe fn refill_with(&mut self, f: impl FnOnce(&mut [MaybeUninit<T>; N]) -> usize) {
         debug_assert!(self.is_empty(), "ArrayQueue should be empty before refilling");
 
         let filled = f(&mut self.array);
 
+        debug_assert!(filled <= N, "Filled more than the capacity");
+
         self.len = filled;
         self.head = 0;
+    }
+
+    /// Returns a pointer to the array as if an array of `T`.
+    fn as_slice_ptr(&self) -> *const [T; N] {
+        (&raw const self.array).cast()
     }
 }
 
@@ -242,25 +249,25 @@ impl<T, const N: usize> Deref for ArrayQueue<T, N> {
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
-        &*self.array
+        unsafe { &*self.as_slice_ptr() }
     }
 }
 
 impl<T, const N: usize> AsRef<[T]> for ArrayQueue<T, N> {
     fn as_ref(&self) -> &[T] {
-        &*self.array
+        unsafe { &*self.as_slice_ptr() }
     }
 }
 
 impl<T, const N: usize> DerefMut for ArrayQueue<T, N> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut *self.array
+        unsafe { &mut *self.as_slice_ptr().cast_mut() }
     }
 }
 
 impl<T, const N: usize> AsMut<[T]> for ArrayQueue<T, N> {
     fn as_mut(&mut self) -> &mut [T] {
-        &mut *self.array
+        unsafe { &mut *self.as_slice_ptr().cast_mut() }
     }
 }
 
@@ -273,7 +280,7 @@ impl<T, const N: usize> Default for ArrayQueue<T, N> {
 impl<T, const N: usize> From<[T; N]> for ArrayQueue<T, N> {
     fn from(array: [T; N]) -> Self {
         Self {
-            array: ManuallyDrop::new(array),
+            array: unsafe { (&raw const array).cast::<[MaybeUninit<T>; N]>().read() },
             len: N,
             head: 0,
         }
@@ -344,7 +351,13 @@ mod tests {
 
         unsafe {
         queue.refill_with(|array| {
-                array.copy_from_slice(&[1, 2, 3, 4]);
+                array.copy_from_slice(&[
+                    MaybeUninit::new(1),
+                    MaybeUninit::new(2),
+                    MaybeUninit::new(3),
+                    MaybeUninit::new(4)
+                ]);
+
                 4
             });
         };
