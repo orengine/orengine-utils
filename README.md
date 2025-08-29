@@ -12,6 +12,8 @@ This repository provides utilities for building high-performance applications.
     efficient time handling and compact time representation.  
 - **[`array_queue`](./src/array_queue.rs)** — provides the [`ArrayQueue`](./src/array_queue.rs) type, 
     an array-based queue implementation.
+- **[`vec_queue`](./src/vec_queue.rs)** — provides the [`VecQueue`](./src/vec_queue.rs) type,
+    an vector-based queue implementation.
 - **[`config_macro`](./src/config_macro.rs)** — provides the `config_target_pointer_width_64`, 
     `config_target_pointer_width_32`, and `config_target_pointer_width_16` macros, 
     which are used to right compile the program based on the target platform.
