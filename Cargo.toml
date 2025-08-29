@@ -1,9 +1,9 @@
 [package]
 name = "orengine-utils"
-version = "1.3.0"
+version = "1.4.0"
 edition = "2021"
 description = "This repository provides utilities for building high-performance applications."
-repository = "https://github.com/orengine/parcoll"
+repository = "https://github.com/orengine/orengine-utils"
 license = "MIT"
 keywords = ["utils", "concurrency", "performance", "hints", "cache-padded"]
 categories = ["concurrency"]
