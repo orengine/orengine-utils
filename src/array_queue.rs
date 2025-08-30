@@ -3,6 +3,7 @@ use crate::hints::{assert_hint, likely, unlikely};
 use std::mem::MaybeUninit;
 use std::ops::{Deref, DerefMut};
 use std::{mem, ptr};
+use std::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
 
 /// `ArrayQueue` is a queue, but it uses an array on a stack and can't be resized.
 ///
@@ -59,7 +60,7 @@ impl<T, const N: usize> ArrayQueue<T, N> {
 
     /// Returns an index of the underlying array for the provided index.
     #[inline]
-    fn to_physical_idx(&self, idx: usize) -> usize {
+    fn to_physical_idx_from_head(&self, idx: usize) -> usize {
         let logical_index = self.head + idx;
 
         debug_assert!(logical_index < N || (logical_index - N) < N);
@@ -71,6 +72,188 @@ impl<T, const N: usize> ArrayQueue<T, N> {
         }
     }
 
+    /// Returns a pair of slices that represent the occupied region of the queue.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use orengine_utils::ArrayQueue;
+    ///
+    /// let mut array_queue = ArrayQueue::<u32, 4>::new();
+    ///
+    /// array_queue.push(1).unwrap();
+    /// array_queue.push(2).unwrap();
+    ///
+    /// let should_be: (&[u32], &[u32]) = (&[1, 2], &[]);
+    ///
+    /// assert_eq!(array_queue.as_slices(), should_be);
+    ///
+    /// array_queue.push(3).unwrap();
+    /// array_queue.push(4).unwrap();
+    ///
+    /// assert_eq!(array_queue.pop(), Some(1));
+    /// assert_eq!(array_queue.pop(), Some(2));
+    ///
+    /// array_queue.push(5).unwrap();
+    ///
+    /// let should_be: (&[u32], &[u32]) = (&[3, 4], &[5]);
+    ///
+    /// assert_eq!(array_queue.as_slices(), should_be);
+    /// ```
+    pub fn as_slices(&self) -> (&[T], &[T]) {
+        let phys_head = self.to_physical_idx_from_head(0);
+        let phys_tail = self.to_physical_idx_from_head(self.len());
+
+        if phys_tail > phys_head {
+            (
+                unsafe { &*slice_from_raw_parts(self.array.as_ptr().add(phys_head).cast(), self.len) },
+                &[],
+            )
+        } else {
+            (
+                unsafe { &*slice_from_raw_parts(self.array.as_ptr().add(phys_head).cast(), N - phys_head) },
+                unsafe { &*slice_from_raw_parts(self.array.as_ptr().cast(), phys_tail) },
+            )
+        }
+    }
+
+    /// Returns a pair of mutable slices that represent the occupied region of the queue.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use orengine_utils::ArrayQueue;
+    ///
+    /// let mut array_queue = ArrayQueue::<u32, 4>::new();
+    ///
+    /// array_queue.push(1).unwrap();
+    /// array_queue.push(2).unwrap();
+    ///
+    /// let should_be: (&mut [u32], &mut [u32]) = (&mut [1, 2], &mut []);
+    ///
+    /// assert_eq!(array_queue.as_mut_slices(), should_be);
+    ///
+    /// array_queue.push(3).unwrap();
+    /// array_queue.push(4).unwrap();
+    ///
+    /// assert_eq!(array_queue.pop(), Some(1));
+    /// assert_eq!(array_queue.pop(), Some(2));
+    ///
+    /// array_queue.push(5).unwrap();
+    ///
+    /// let should_be: (&mut [u32], &mut [u32]) = (&mut [3, 4], &mut [5]);
+    ///
+    /// assert_eq!(array_queue.as_mut_slices(), should_be);
+    /// ```
+    pub fn as_mut_slices(&mut self) -> (&mut [T], &mut [T]) {
+        let phys_head = self.to_physical_idx_from_head(0);
+        let phys_tail = self.to_physical_idx_from_head(self.len());
+
+        if phys_tail > phys_head {
+            (
+                unsafe { &mut *slice_from_raw_parts_mut(self.array.as_mut_ptr().add(phys_head).cast(), self.len) },
+                &mut [],
+            )
+        } else {
+            (
+                unsafe { &mut *slice_from_raw_parts_mut(self.array.as_mut_ptr().add(phys_head).cast(), N - phys_head) },
+                unsafe { &mut *slice_from_raw_parts_mut(self.array.as_mut_ptr().cast(), phys_tail) },
+            )
+        }
+    }
+
+    /// Increases the head index by the specified number and decreases the length by the same number.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure usage of items that become available after this function.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use orengine_utils::ArrayQueue;
+    ///
+    /// let mut queue = ArrayQueue::from([1, 2, 3, 4]);
+    ///
+    /// queue.pop().unwrap();
+    /// queue.push(5).unwrap();
+    ///
+    /// let slices = queue.as_mut_slices();
+    /// let should_be: (&mut [u32], &mut [u32]) = (&mut [2, 3, 4], &mut [5]);
+    /// assert_eq!(slices, should_be);
+    ///
+    /// for item in slices.0.iter_mut() {
+    ///     // Do something with items
+    ///     unsafe { std::ptr::drop_in_place(item); } // Ensure the items are dropped
+    /// }
+    ///
+    /// // Here head is 1 and len is 4
+    ///
+    /// let slices = queue.as_slices();
+    /// let as_previous: (&[u32], &[u32]) = (&[2, 3, 4], &[5]); // But the queue is still the same, while 3 elements were read
+    /// assert_eq!(slices, as_previous);
+    ///
+    /// unsafe { queue.inc_head_by(3); }
+    ///
+    /// // Here head is 0 (4 is wrapped around), and len is 1
+    ///
+    /// let slices = queue.as_slices();
+    /// let should_be: (&[u32], &[u32]) = (&[5], &[]);
+    /// assert_eq!(slices, should_be); // Now it is valid
+    /// ```
+    pub unsafe fn inc_head_by(&mut self, number: usize) {
+        self.head = self.to_physical_idx_from_head(number);
+        self.len -= number;
+    }
+
+    /// Decreases the length by the specified number.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that the length is not less than the specified number.
+    /// And the caller must ensure usage of items that become available after this function.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use orengine_utils::ArrayQueue;
+    ///
+    /// let mut queue = ArrayQueue::from([1, 2, 3, 4]);
+    ///
+    /// queue.pop().unwrap();
+    /// queue.pop().unwrap();
+    /// queue.push(5).unwrap();
+    /// queue.push(6).unwrap();
+    ///
+    /// let slices = queue.as_mut_slices();
+    /// let should_be: (&mut [u32], &mut [u32]) = (&mut [3, 4], &mut [5, 6]);
+    /// assert_eq!(slices, should_be);
+    ///
+    /// for item in slices.1.iter_mut() {
+    ///     // Do something with items
+    ///     unsafe { std::ptr::drop_in_place(item); } // Ensure the items are dropped
+    /// }
+    ///
+    /// // Here head is 2 and len is 4
+    ///
+    /// let slices = queue.as_slices();
+    /// let as_previous: (&[u32], &[u32]) = (&[3, 4], &[5, 6]); // But the queue is still the same, while 2 elements were read
+    /// assert_eq!(slices, as_previous);
+    ///
+    /// unsafe { queue.dec_len_by(2); }
+    ///
+    /// // Here head is 2 and len is 2
+    ///
+    /// let slices = queue.as_slices();
+    /// let should_be: (&[u32], &[u32]) = (&[3, 4], &[]);
+    /// assert_eq!(slices, should_be); // Now it is valid
+    /// ```
+    pub unsafe fn dec_len_by(&mut self, number: usize) {
+        debug_assert!(self.len >= number);
+
+        self.len -= number;
+    }
+
     /// Appends an element to the back of the queue.
     ///
     /// # Safety
@@ -79,7 +262,7 @@ impl<T, const N: usize> ArrayQueue<T, N> {
     pub unsafe fn push_unchecked(&mut self, value: T) {
         assert_hint(self.len() < N, "Tried to push to a full array stack");
 
-        let idx = self.to_physical_idx(self.len());
+        let idx = self.to_physical_idx_from_head(self.len());
 
         unsafe { ptr::write(self.array.get_unchecked_mut(idx), MaybeUninit::new(value)) };
 
@@ -103,7 +286,7 @@ impl<T, const N: usize> ArrayQueue<T, N> {
             self.len -= 1;
 
             let idx = self.head;
-            self.head = self.to_physical_idx(1);
+            self.head = self.to_physical_idx_from_head(1);
 
             assert_hint(
                 self.array.len() > idx,
@@ -116,30 +299,30 @@ impl<T, const N: usize> ArrayQueue<T, N> {
         }
     }
 
-    /// Drops all elements in the queue and set the length to 0.
-    pub fn clear(&mut self) {
-        if mem::needs_drop::<T>() {
-            for i in 0..self.len {
-                let idx = self.to_physical_idx(i);
-
-                unsafe { ptr::drop_in_place(self.array.get_unchecked_mut(idx)) };
-            }
-        }
-
-        self.len = 0;
-    }
-
     /// Clears with calling the provided function on each element.
     pub fn clear_with<F>(&mut self, mut f: F)
     where
         F: FnMut(T),
     {
         for i in 0..self.len {
-            let idx = self.to_physical_idx(i);
+            let idx = self.to_physical_idx_from_head(i);
 
             let value = unsafe { self.array.get_unchecked_mut(idx).assume_init_read() };
 
             f(value);
+        }
+
+        self.len = 0;
+    }
+
+    /// Drops all elements in the queue and set the length to 0.
+    pub fn clear(&mut self) {
+        if mem::needs_drop::<T>() {
+            for i in 0..self.len {
+                let idx = self.to_physical_idx_from_head(i);
+
+                unsafe { ptr::drop_in_place(self.array.get_unchecked_mut(idx)) };
+            }
         }
 
         self.len = 0;
@@ -157,7 +340,7 @@ impl<T, const N: usize> ArrayQueue<T, N> {
 
             fn next(&mut self) -> Option<Self::Item> {
                 if self.iterated < self.queue.len {
-                    let idx = self.queue.to_physical_idx(self.iterated);
+                    let idx = self.queue.to_physical_idx_from_head(self.iterated);
 
                     self.iterated += 1;
 
@@ -196,7 +379,7 @@ impl<T, const N: usize> ArrayQueue<T, N> {
 
             fn next(&mut self) -> Option<Self::Item> {
                 if self.iterated < self.queue.len {
-                    let idx = self.queue.to_physical_idx(self.iterated);
+                    let idx = self.queue.to_physical_idx_from_head(self.iterated);
 
                     self.iterated += 1;
 
