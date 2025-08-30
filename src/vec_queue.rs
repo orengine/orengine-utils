@@ -287,7 +287,14 @@ impl<T> VecQueue<T> {
 
     /// Clears the queue.
     pub fn clear(&mut self) {
-        self.clear_with(drop);
+        if mem::needs_drop::<T>() {
+            self.clear_with(drop);
+            
+            return;
+        }
+        
+        self.head = 0;
+        self.tail = 0;
     }
 
     /// Returns an iterator over the queue.
