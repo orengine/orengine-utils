@@ -6,7 +6,10 @@ use crate::hints::unlikely;
 
 /// A queue that uses a vector to store the elements.
 ///
-/// Unlike [`std::collections::VecDeque`], this queue is not double-ended.
+/// It is a similar to [`std::collections::VecDeque`], but it provides a few additional methods
+/// that are used by [`Orengine's projects`].
+///
+/// [`Orengine's projects`]: https://github.com/orengine
 pub struct VecQueue<T> {
     ptr: *mut T,
     head: usize,
@@ -158,6 +161,37 @@ impl<T> VecQueue<T> {
         self.tail = self.tail.wrapping_add(1);
     }
 
+    /// Pushes the provided value to the front of the queue.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use orengine_utils::VecQueue;
+    ///
+    /// let mut queue = VecQueue::new();
+    ///
+    /// queue.push_priority_value(1); // [1, _, _]
+    /// queue.push(2); // [1, 2, _]
+    /// queue.push_priority_value(3); // [3, 1, 2]
+    ///
+    /// assert_eq!(queue.pop(), Some(3));
+    /// assert_eq!(queue.pop(), Some(1));
+    /// assert_eq!(queue.pop(), Some(2));
+    /// ```
+    pub fn push_priority_value(&mut self, value: T) {
+        if unlikely(self.len() == self.capacity) {
+            self.extend_to(self.capacity * 2);
+        }
+
+        self.head = self.head.wrapping_sub(1);
+
+        unsafe {
+            let index = self.get_physical_index(self.head);
+
+            self.ptr.add(index).write(value);
+        }
+    }
+
     /// Pops a value from the queue.
     #[inline]
     pub fn pop(&mut self) -> Option<T> {
@@ -169,6 +203,37 @@ impl<T> VecQueue<T> {
         let value = unsafe { self.ptr.add(index).read() };
 
         self.head = self.head.wrapping_add(1);
+
+        Some(value)
+    }
+
+    /// Removes the last element and returns it, or `None` if the queue is empty.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use orengine_utils::VecQueue;
+    ///
+    /// let mut queue = VecQueue::new();
+    ///
+    /// queue.push(1); // [1, _, _]
+    /// queue.push(2); // [1, 2, _]
+    /// queue.push(3); // [1, 2, 3]
+    ///
+    /// assert_eq!(queue.pop_less_priority_value(), Some(3));
+    /// assert_eq!(queue.pop(), Some(1));
+    /// assert_eq!(queue.pop(), Some(2));
+    /// ```
+    #[inline]
+    pub fn pop_less_priority_value(&mut self) -> Option<T> {
+        if self.is_empty() {
+            return None;
+        }
+
+        self.tail = self.tail.wrapping_sub(1);
+
+        let index = self.get_physical_index(self.tail);
+        let value = unsafe { self.ptr.add(index).read() };
 
         Some(value)
     }
@@ -212,7 +277,6 @@ impl<T> VecQueue<T> {
 
         self.tail = self.tail.wrapping_add(slice.len());
     }
-
 
     /// Accepts a function that will be called with the slices of the queue to move.
     ///
@@ -289,10 +353,10 @@ impl<T> VecQueue<T> {
     pub fn clear(&mut self) {
         if mem::needs_drop::<T>() {
             self.clear_with(drop);
-            
+
             return;
         }
-        
+
         self.head = 0;
         self.tail = 0;
     }

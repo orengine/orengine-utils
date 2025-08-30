@@ -258,7 +258,7 @@ impl<T, const N: usize> ArrayQueue<T, N> {
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the stack is not full.
+    /// The caller must ensure that the queue is not full.
     pub unsafe fn push_unchecked(&mut self, value: T) {
         assert_hint(self.len() < N, "Tried to push to a full array stack");
 
@@ -280,6 +280,55 @@ impl<T, const N: usize> ArrayQueue<T, N> {
         }
     }
 
+    /// Pushes the provided value to the front of the queue.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that the queue is not full.
+    pub unsafe fn push_priority_value_unchecked(&mut self, value: T) {
+        assert_hint(self.len() < N, "Tried to push to a full array stack");
+
+        let phys_head = self.to_physical_idx_from_head(0);
+        let idx = if likely(phys_head > 0) {
+            phys_head - 1
+        } else {
+            N - 1
+        };
+
+        unsafe { ptr::write(self.array.get_unchecked_mut(idx), MaybeUninit::new(value)) };
+
+        self.head = idx;
+        self.len += 1;
+    }
+
+    /// Pushes the provided value to the front of the queue
+    /// or returns `Err(value)` if the queue is full.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use orengine_utils::ArrayQueue;
+    ///
+    /// let mut queue = ArrayQueue::<u32, 3>::new();
+    ///
+    /// queue.push_priority_value(1).unwrap(); // [1, _, _]
+    /// queue.push(2).unwrap(); // [1, 2, _]
+    /// queue.push_priority_value(3).unwrap(); // [3, 1, 2]
+    ///
+    /// assert_eq!(queue.pop(), Some(3));
+    /// assert_eq!(queue.pop(), Some(1));
+    /// assert_eq!(queue.pop(), Some(2));
+    /// ```
+    pub fn push_priority_value(&mut self, value: T) -> Result<(), T> {
+        if likely(self.len() < N) {
+            unsafe { self.push_priority_value_unchecked(value) };
+
+            Ok(())
+        } else {
+            Err(value)
+        }
+    }
+
     /// Removes the first element and returns it, or `None` if the queue is empty.
     pub fn pop(&mut self) -> Option<T> {
         if !self.is_empty() {
@@ -292,6 +341,35 @@ impl<T, const N: usize> ArrayQueue<T, N> {
                 self.array.len() > idx,
                 &format!("idx: {}, len: {}", idx, self.array.len()),
             );
+
+            Some(unsafe { self.array.get_unchecked_mut(idx).assume_init_read() })
+        } else {
+            None
+        }
+    }
+
+    /// Removes the last element and returns it, or `None` if the queue is empty.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use orengine_utils::ArrayQueue;
+    ///
+    /// let mut queue = ArrayQueue::<u32, 3>::new();
+    ///
+    /// queue.push(1).unwrap(); // [1, _, _]
+    /// queue.push(2).unwrap(); // [1, 2, _]
+    /// queue.push(3).unwrap(); // [1, 2, 3]
+    ///
+    /// assert_eq!(queue.pop_less_priority_value(), Some(3));
+    /// assert_eq!(queue.pop(), Some(1));
+    /// assert_eq!(queue.pop(), Some(2));
+    /// ```
+    pub fn pop_less_priority_value(&mut self) -> Option<T> {
+        if !self.is_empty() {
+            self.len -= 1;
+
+            let idx = self.to_physical_idx_from_head(self.len());
 
             Some(unsafe { self.array.get_unchecked_mut(idx).assume_init_read() })
         } else {
