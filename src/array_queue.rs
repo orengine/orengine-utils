@@ -28,7 +28,7 @@ pub struct ArrayQueue<T, const N: usize> {
 }
 
 impl<T, const N: usize> ArrayQueue<T, N> {
-    /// Creates new `ArrayQueue`.
+    /// Creates a new `ArrayQueue`.
     pub fn new() -> Self {
         #[allow(
             clippy::uninit_assumed_init,
@@ -500,9 +500,14 @@ impl<T, const N: usize> ArrayQueue<T, N> {
         self.head = 0;
     }
 
-    /// Returns a pointer to the array as if an array of `T`.
+    /// Returns a pointer to the underlying array.
     fn as_slice_ptr(&self) -> *const [T; N] {
         (&raw const self.array).cast()
+    }
+    
+    /// Returns a mutable pointer to the underlying array.
+    fn as_mut_slice_ptr(&mut self) -> *mut [T; N] {
+        (&raw mut self.array).cast()
     }
 }
 
@@ -522,13 +527,13 @@ impl<T, const N: usize> AsRef<[T]> for ArrayQueue<T, N> {
 
 impl<T, const N: usize> DerefMut for ArrayQueue<T, N> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe { &mut *self.as_slice_ptr().cast_mut() }
+        unsafe { &mut *self.as_mut_slice_ptr() }
     }
 }
 
 impl<T, const N: usize> AsMut<[T]> for ArrayQueue<T, N> {
     fn as_mut(&mut self) -> &mut [T] {
-        unsafe { &mut *self.as_slice_ptr().cast_mut() }
+        unsafe { &mut *self.as_mut_slice_ptr() }
     }
 }
 
