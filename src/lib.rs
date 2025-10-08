@@ -22,8 +22,10 @@ mod clear_with;
 mod array_queue;
 mod config_macro;
 mod vec_queue;
+mod array_buffer;
 
 pub use clear_with::*;
 pub use array_queue::ArrayQueue;
 pub use instant::OrengineInstant;
 pub use vec_queue::VecQueue;
+pub use array_buffer::ArrayBuffer;
