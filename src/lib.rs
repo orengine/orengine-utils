@@ -5,7 +5,7 @@
 //! - The [`backoff module`](backoff) provides the [`Backoff`](backoff::Backoff) structure.
 //! - The [`cache_padded module`](cache_padded) provides cache-padded atomics types and
 //!   the [`generate_cache_padded_type`] macro.
-//! - The [`light_arc module`](light arc) provides the [`LightArc`](light_arc::LightArc) type.
+//! - The [`light_arc module`](light_arc) provides the [`LightArc`](light_arc::LightArc) type.
 //! - The [`OrengineInstant`] that is a monotone clock that weights 8 bytes on Unix-like systems.
 //! - The [`ArrayQueue`] that is an array-based queue implementation.
 //! - The [`VecQueue`] that is a vector-based queue implementation.
