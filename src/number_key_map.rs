@@ -513,7 +513,7 @@ pub struct Drain<'a, V> {
     _marker: std::marker::PhantomData<&'a mut V>,
 }
 
-impl<'a, V> Iterator for Drain<'a, V> {
+impl<V> Iterator for Drain<'_, V> {
     type Item = (usize, V);
 
     fn next(&mut self) -> Option<Self::Item> {
