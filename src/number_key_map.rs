@@ -128,7 +128,7 @@ impl<V> NumberKeyMap<V> {
     }
 
     /// Get a mutable reference to the slot at `idx`.
-    fn get_slot_mut(&self, idx: usize) -> &mut Slot<V> {
+    fn get_slot_mut(&mut self, idx: usize) -> &mut Slot<V> {
         unsafe { &mut *Self::get_slot_ptr(self.inner, self.capacity, idx) }
     }
 
@@ -143,7 +143,7 @@ impl<V> NumberKeyMap<V> {
     pub fn get(&self, key: usize) -> Option<&V> {
         Self::validate_key(key);
 
-        if unlikely(self.inner == null_mut()) {
+        if unlikely(self.inner.is_null()) {
             return None;
         }
 
@@ -168,7 +168,7 @@ impl<V> NumberKeyMap<V> {
     pub fn get_mut(&mut self, key: usize) -> Option<&mut V> {
         Self::validate_key(key);
 
-        if unlikely(self.inner == null_mut()) {
+        if unlikely(self.inner.is_null()) {
             return None;
         }
 
@@ -261,7 +261,7 @@ impl<V> NumberKeyMap<V> {
                 unsafe {
                     let slot = new_inner.add(i);
 
-                    (&mut *slot).key = usize::MAX;
+                    (*slot).key = usize::MAX;
                 };
             }
 
@@ -380,7 +380,7 @@ impl<V> NumberKeyMap<V> {
     pub fn insert(&mut self, key: usize, value: V) -> Result<(), V> {
         Self::validate_key(key);
 
-        if unlikely(self.inner == null_mut()) {
+        if unlikely(self.inner.is_null()) {
             self.insert_first(key, value);
 
             return Ok(());
@@ -438,6 +438,12 @@ impl<V> NumberKeyMap<V> {
     /// Clears the [`NumberKeyMap`].
     pub fn clear(&mut self) {
         self.clear_with(drop);
+    }
+}
+
+impl<V> Default for NumberKeyMap<V> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -566,7 +572,7 @@ impl<V> Drop for IntoIter<V> {
     fn drop(&mut self) {
         unsafe {
             // Drop remaining values
-            while let Some((_k, v)) = self.next() {
+            for (_k, v) in self.by_ref() {
                 drop(v);
             }
 
@@ -837,6 +843,7 @@ mod tests {
 
         let iter = m.drain();
 
+        #[allow(clippy::drop_non_drop, reason = "It is tested here")]
         drop(iter);
 
         assert_eq!(drops.get(), 10);
