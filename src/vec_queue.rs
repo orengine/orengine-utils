@@ -89,6 +89,27 @@ impl<T> VecQueue<T> {
         self.head == self.tail
     }
 
+    /// Reserves capacity for at least additional more elements to be inserted in the given `VecQueue`.
+    ///
+    /// The collection may reserve more space to speculatively avoid frequent reallocations.
+    /// After calling reserve, capacity will be greater than or equal to `self.len() + additional`.
+    ///
+    /// Does nothing if capacity is already sufficient.
+    pub fn reserve(&mut self, additional: usize) {
+        let needed = self.len() + additional;
+        if needed <= self.capacity {
+            return;
+        }
+
+        let mut new_capacity = self.capacity * 2;
+
+        while unlikely(needed > new_capacity) {
+            new_capacity *= 2;
+        }
+
+        self.extend_to(new_capacity);
+    }
+
     /// Extends the vector to the given capacity.
     ///
     /// # Panics
@@ -245,16 +266,7 @@ impl<T> VecQueue<T> {
     /// It `T` is not `Copy`, the caller should [`forget`](mem::forget) the values.
     #[inline]
     pub unsafe fn extend_from_slice(&mut self, slice: &[T]) {
-        let needed = self.len() + slice.len();
-
-        if unlikely(needed > self.capacity) {
-            let mut new_capacity = self.capacity;
-            while new_capacity < needed {
-                new_capacity *= 2;
-            }
-
-            self.extend_to(new_capacity);
-        }
+        self.reserve(slice.len());
 
         let phys_tail = self.get_physical_index(self.tail);
         let right_space = self.capacity - phys_tail;
