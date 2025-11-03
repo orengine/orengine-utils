@@ -310,10 +310,14 @@ impl<T> VecQueue<T> {
     /// let mut receiver = Vec::with_capacity(10);
     ///
     /// unsafe {
-    ///     queue.take_batch(|first_slice, second_slice| {
+    ///     let popped = queue.take_batch(|first_slice, second_slice| {
     ///         receiver.extend_from_slice(first_slice);
     ///         receiver.extend_from_slice(second_slice);
+    ///
+    ///         first_slice.len() + second_slice.len();
     ///     }, 8);
+    ///
+    ///     assert_eq!(popped, 8);
     /// }
     ///
     /// assert_eq!(receiver, (0..8).collect::<Vec<_>>());
@@ -321,7 +325,11 @@ impl<T> VecQueue<T> {
     /// assert_eq!(queue.pop(), Some(8));
     /// assert_eq!(queue.pop(), Some(9));
     /// ```
-    pub unsafe fn take_batch<F: FnOnce(&[T], &[T])>(&mut self, f: F, mut limit: usize) {
+    pub unsafe fn take_batch<R, F: FnOnce(&[T], &[T]) -> R>(
+        &mut self,
+        f: F,
+        mut limit: usize
+    ) -> R {
         limit = self.len().min(limit);
 
         let phys_head = self.get_physical_index(self.head);
@@ -331,20 +339,17 @@ impl<T> VecQueue<T> {
 
         if limit <= right_occupied {
             // We can copy from the head to the head + limit.
-            f(
+            // The head is already updated.
+            return f(
                 unsafe {&*slice_from_raw_parts(self.ptr.add(phys_head), limit) },
                 &[],
             );
-
-            // The head is already updated.
-
-            return;
         }
 
         let slice1 = unsafe { &*slice_from_raw_parts(self.ptr.add(phys_head), right_occupied) };
         let slice2 = unsafe { &*slice_from_raw_parts(self.ptr, limit - right_occupied) };
 
-        f(slice1, slice2);
+        f(slice1, slice2)
 
         // The head is already updated.
     }
