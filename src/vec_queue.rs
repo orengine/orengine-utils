@@ -6,7 +6,7 @@ use crate::hints::unlikely;
 
 /// A queue that uses a vector to store the elements.
 ///
-/// It is a similar to [`std::collections::VecDeque`], but it provides a few additional methods
+/// It is similar to [`std::collections::VecDeque`], but it provides a few additional methods
 /// that are used by [`Orengine's projects`].
 ///
 /// [`Orengine's projects`]: https://github.com/orengine
@@ -314,7 +314,7 @@ impl<T> VecQueue<T> {
     ///         receiver.extend_from_slice(first_slice);
     ///         receiver.extend_from_slice(second_slice);
     ///
-    ///         first_slice.len() + second_slice.len();
+    ///         first_slice.len() + second_slice.len()
     ///     }, 8);
     ///
     ///     assert_eq!(popped, 8);
