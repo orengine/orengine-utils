@@ -2,7 +2,9 @@
 use crate::hints::{assert_hint, likely, unlikely};
 use std::mem::MaybeUninit;
 use std::ops::{Deref, DerefMut};
-use std::{mem, ptr};
+use std::{fmt, mem, ptr};
+use std::error::Error;
+use std::fmt::{Display, Formatter};
 use std::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
 
 /// `ArrayQueue` is a queue, but it uses an array on a stack and can't be resized.
@@ -27,12 +29,24 @@ pub struct ArrayQueue<T, const N: usize> {
     head: usize,
 }
 
+/// Error returned by [`ArrayQueue::extend_from_slice`] when the queue does not have enough space.
+#[derive(Debug)]
+pub struct NotEnoughSpace;
+
+impl Display for NotEnoughSpace {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "Not enough space")
+    }
+}
+
+impl Error for NotEnoughSpace {}
+
 impl<T, const N: usize> ArrayQueue<T, N> {
     /// Creates a new `ArrayQueue`.
     pub fn new() -> Self {
         #[allow(
             clippy::uninit_assumed_init,
-            reason = "We guarantee that the array is initialized, when reading from it"
+            reason = "We guarantee that the array is initialized when reading from it"
         )]
         {
             Self {
@@ -377,6 +391,44 @@ impl<T, const N: usize> ArrayQueue<T, N> {
         }
     }
 
+    /// Pushes a slice to the queue.
+    ///
+    /// It returns an error if the queue does not have enough space.
+    ///
+    /// # Safety
+    ///
+    /// It `T` is not `Copy`, the caller should [`forget`](mem::forget) the values.
+    #[inline]
+    pub unsafe fn extend_from_slice(&mut self, slice: &[T]) -> Result<(), NotEnoughSpace> {
+        if unlikely(self.len() + slice.len() > self.capacity()) {
+            return Err(NotEnoughSpace);
+        }
+
+        let phys_tail = self.to_physical_idx_from_head(self.len());
+        let right_space = self.capacity() - phys_tail;
+        let ptr = (&raw mut self.array).cast::<T>();
+
+        unsafe {
+            if slice.len() <= right_space {
+                // fits in one memcpy
+                ptr::copy_nonoverlapping(slice.as_ptr(), ptr.add(phys_tail), slice.len());
+            } else {
+                // wraparound case
+                ptr::copy_nonoverlapping(slice.as_ptr(), ptr.add(phys_tail), right_space);
+
+                ptr::copy_nonoverlapping(
+                    slice.as_ptr().add(right_space),
+                    ptr,
+                    slice.len() - right_space,
+                );
+            }
+        }
+
+        self.len += slice.len();
+
+        Ok(())
+    }
+
     /// Clears with calling the provided function on each element.
     pub fn clear_with<F>(&mut self, mut f: F)
     where
@@ -630,5 +682,66 @@ mod tests {
 
         assert_eq!(queue.len(), 4);
         assert_eq!(queue.iter().collect::<Vec<_>>(), vec![&1, &2, &3, &4]);
+    }
+
+    #[test]
+    fn test_array_queue_extend_from_slice() {
+        // --- CASE 1: without wraparound ---
+        {
+            let mut q = ArrayQueue::<usize, 8>::new();
+
+            unsafe { q.extend_from_slice(&[1, 2, 3]).unwrap(); }
+
+            assert_eq!(q.len(), 3);
+
+            assert_eq!(q.pop().unwrap(), 1);
+            assert_eq!(q.pop().unwrap(), 2);
+            assert_eq!(q.pop().unwrap(), 3);
+
+            // With the updated head index
+
+            unsafe { q.extend_from_slice(&[1, 2, 3]).unwrap(); }
+
+            assert_eq!(q.len(), 3);
+
+            assert_eq!(q.pop().unwrap(), 1);
+            assert_eq!(q.pop().unwrap(), 2);
+            assert_eq!(q.pop().unwrap(), 3);
+        }
+
+        // --- CASE 2: wraparound ---
+        {
+            let mut q = ArrayQueue::<usize, 8>::new();
+
+            unsafe { q.extend_from_slice(&[1, 2, 3, 4, 5, 6, 7]).unwrap(); };
+
+            q.pop().unwrap();
+            q.pop().unwrap();
+            q.pop().unwrap();
+            q.pop().unwrap();
+
+            assert_eq!(q.len(), 3);
+
+            unsafe { q.extend_from_slice(&[50, 51, 52, 53, 54]).unwrap(); }
+
+            assert_eq!(q.len(), 8);
+
+            let mut actual = Vec::new();
+            while let Some(value) = q.pop() {
+                actual.push(value);
+            }
+
+            assert_eq!(&actual, &[5, 6, 7, 50, 51, 52, 53, 54]);
+        }
+
+        // --- CASE 4: overflow → Err ---
+        {
+            let mut q = ArrayQueue::<usize, 4>::new();
+
+            unsafe { q.extend_from_slice(&[1, 2, 3]).unwrap(); };
+
+            assert!(unsafe { q.extend_from_slice(&[9,9]) }.is_err());
+            assert_eq!(q.len(), 3, "len must remain unchanged");
+        }
     }
 }
