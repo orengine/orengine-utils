@@ -1,7 +1,7 @@
 //! Provides cache-padded atomic types.
 use std::sync::atomic::{
-    AtomicI16, AtomicI32, AtomicI64, AtomicI8, AtomicIsize, AtomicU16, AtomicU32, AtomicU64,
-    AtomicU8, AtomicUsize,
+    AtomicI16, AtomicI32, AtomicI64, AtomicI8, AtomicIsize, AtomicPtr, AtomicU16, AtomicU32,
+    AtomicU64, AtomicU8, AtomicUsize,
 };
 
 #[cfg(any(
@@ -51,12 +51,43 @@ pub const CACHE_LINE_SIZE: usize = 256;
 /// A cache line size for the architecture that the application is compiled for.
 pub const CACHE_LINE_SIZE: usize = 64;
 
-/// Generates a cache padded type. 
-/// It accepts a name of the new type, the inner type and the default function.
-/// 
+/// Generates a cache padded type.
+/// It accepts a name of the new type, the inner type, and the default function.
+///
 /// The new type can be dereferenced to the inner type.
 #[macro_export]
 macro_rules! generate_cache_padded_type {
+    ($name:ident < $($generics:tt),* >, $atomic:ident < $($atomic_generics:tt),* >, $default:block) => {
+        impl < $($generics),* > $name < $($generics),* > {
+            /// Creates a new cache padded inner type.
+            pub const fn new() -> Self {
+                Self {
+                    inner_type: $default,
+                    _align: std::mem::MaybeUninit::uninit(),
+                }
+            }
+        }
+
+        impl < $($generics),* > std::ops::Deref for $name < $($generics),* > {
+            type Target = $atomic < $($atomic_generics),* >;
+
+            fn deref(&self) -> &Self::Target {
+                &self.inner_type
+            }
+        }
+
+        impl < $($generics),* > std::ops::DerefMut for $name < $($generics),* > {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.inner_type
+            }
+        }
+
+        impl < $($generics),* > Default for $name < $($generics),* > {
+            fn default() -> Self {
+                Self::new()
+            }
+        }
+    };
     ($name:ident, $atomic:ident, $default:block) => {
         /// Cache padded inner type. Can be dereferenced to the inner type.
         pub struct $name {
@@ -113,3 +144,39 @@ generate_cache_padded_type!(CachePaddedAtomicI16, AtomicI16, { AtomicI16::new(0)
 generate_cache_padded_type!(CachePaddedAtomicI32, AtomicI32, { AtomicI32::new(0) });
 generate_cache_padded_type!(CachePaddedAtomicI64, AtomicI64, { AtomicI64::new(0) });
 generate_cache_padded_type!(CachePaddedAtomicIsize, AtomicIsize, { AtomicIsize::new(0) });
+
+/// Cache padded inner type. Can be dereferenced to the inner type.
+pub(crate) struct CachePaddedAtomicPtr<T> {
+    inner_type: AtomicPtr<T>,
+    _align: std::mem::MaybeUninit<[u8; CACHE_LINE_SIZE - size_of::<usize>()]>,
+}
+
+impl<T> CachePaddedAtomicPtr<T> {
+    /// Creates a new cache padded inner type.
+    pub const fn new() -> Self {
+        Self {
+            inner_type: AtomicPtr::new(std::ptr::null_mut()),
+            _align: std::mem::MaybeUninit::uninit(),
+        }
+    }
+}
+
+impl<T> std::ops::Deref for CachePaddedAtomicPtr<T> {
+    type Target = AtomicPtr<T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner_type
+    }
+}
+
+impl<T> std::ops::DerefMut for CachePaddedAtomicPtr<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner_type
+    }
+}
+
+impl<T> Default for CachePaddedAtomicPtr<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
