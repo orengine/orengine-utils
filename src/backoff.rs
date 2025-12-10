@@ -58,7 +58,7 @@ impl Backoff {
     /// It [`spins`](Self::spin) or calls the provided function if
     /// it [`should be used`](Self::is_completed).
     ///
-    /// If the provided function is [`core::thread::yield_now`],
+    /// If the provided function is [`std::thread::yield_now`],
     /// then this function has the same behaviour as [`snooze`](Self::snooze).
     #[inline]
     pub fn spin_or<F>(&self, f: F)
