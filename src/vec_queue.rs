@@ -1,8 +1,8 @@
 //! This module provides the [`VecQueue`] an vector-based queue implementation.
 
-use std::{mem, ptr};
-use std::ptr::slice_from_raw_parts;
 use crate::hints::unlikely;
+use core::ptr::slice_from_raw_parts;
+use core::{mem, ptr};
 
 /// A queue that uses a vector to store the elements.
 ///
@@ -25,7 +25,8 @@ impl<T> VecQueue<T> {
         debug_assert!(capacity > 0 && capacity.is_power_of_two());
 
         unsafe {
-            std::alloc::alloc(std::alloc::Layout::array::<T>(capacity).unwrap_unchecked()).cast()
+            alloc::alloc::alloc(alloc::alloc::Layout::array::<T>(capacity).unwrap_unchecked())
+                .cast()
         }
     }
 
@@ -33,9 +34,9 @@ impl<T> VecQueue<T> {
     #[cold]
     fn deallocate(ptr: *mut T, capacity: usize) {
         unsafe {
-            std::alloc::dealloc(
+            alloc::alloc::dealloc(
                 ptr.cast(),
-                std::alloc::Layout::array::<T>(capacity).unwrap_unchecked(),
+                alloc::alloc::Layout::array::<T>(capacity).unwrap_unchecked(),
             );
         }
     }
@@ -133,7 +134,10 @@ impl<T> VecQueue<T> {
             return;
         }
 
-        assert!(capacity.is_power_of_two(), "Capacity must be a power of two, provided {capacity}");
+        assert!(
+            capacity.is_power_of_two(),
+            "Capacity must be a power of two, provided {capacity}"
+        );
         assert!(capacity > self.capacity);
 
         let new_ptr = Self::allocate(capacity);
@@ -328,7 +332,7 @@ impl<T> VecQueue<T> {
     pub unsafe fn take_batch<R, F: FnOnce(&[T], &[T]) -> R>(
         &mut self,
         f: F,
-        mut limit: usize
+        mut limit: usize,
     ) -> R {
         limit = self.len().min(limit);
 
@@ -341,7 +345,7 @@ impl<T> VecQueue<T> {
             // We can copy from the head to the head + limit.
             // The head is already updated.
             return f(
-                unsafe {&*slice_from_raw_parts(self.ptr.add(phys_head), limit) },
+                unsafe { &*slice_from_raw_parts(self.ptr.add(phys_head), limit) },
                 &[],
             );
         }

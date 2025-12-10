@@ -1,9 +1,10 @@
 //! This module provides [`LightArc`].
 use crate::hints::unlikely;
-use std::alloc::{dealloc, Layout};
-use std::ptr;
-use std::ptr::NonNull;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use alloc::alloc::{dealloc, Layout};
+use alloc::boxed::Box;
+use core::ptr;
+use core::ptr::NonNull;
+use core::sync::atomic::{AtomicUsize, Ordering};
 
 /// An inner type for [`LightArc`].
 #[repr(C)]
@@ -46,7 +47,7 @@ impl<T> LightArc<T> {
     /// This function must only be called when the reference count is 0.
     #[inline(never)]
     unsafe fn drop_slow(&mut self) {
-        std::sync::atomic::fence(Ordering::Acquire);
+        core::sync::atomic::fence(Ordering::Acquire);
 
         unsafe {
             ptr::drop_in_place(&mut self.inner.as_mut().value);
@@ -77,7 +78,7 @@ impl<T> Drop for LightArc<T> {
     }
 }
 
-impl<T> std::ops::Deref for LightArc<T> {
+impl<T> core::ops::Deref for LightArc<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {

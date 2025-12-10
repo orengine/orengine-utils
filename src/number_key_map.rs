@@ -7,10 +7,10 @@
 //!
 //! The [`NumberKeyMap`] is optimized for zero-misses and so optimized for 99+% reading operations.
 
-use std::alloc::{alloc, dealloc, Layout};
-use std::{mem, ptr};
-use std::ptr::null_mut;
 use crate::hints::{assert_hint, cold_path, likely, unlikely, unwrap_or_bug_hint};
+use alloc::alloc::{alloc, dealloc, Layout};
+use core::ptr::null_mut;
+use core::{mem, ptr};
 
 /// Internal error codes used by the low-level insertion routine.
 ///
@@ -114,12 +114,13 @@ impl<V> NumberKeyMap<V> {
     /// `idx < capacity`. These checks are considered programmer errors in the
     /// original code and will abort the program if violated.
     fn get_slot_ptr(inner: *mut Slot<V>, capacity: usize, idx: usize) -> *mut Slot<V> {
-        assert_hint(!inner.is_null(), "NumberKeyMap is allocated at `get_slot_ptr`");
+        assert_hint(
+            !inner.is_null(),
+            "NumberKeyMap is allocated at `get_slot_ptr`",
+        );
         assert_hint(idx < capacity, "`idx` is out of bounds at `get_slot_ptr`");
 
-        unsafe {
-            inner.add(idx)
-        }
+        unsafe { inner.add(idx) }
     }
 
     /// Get an immutable reference to the slot at `idx`.
@@ -216,19 +217,28 @@ impl<V> NumberKeyMap<V> {
         key: usize,
         value_ptr: *const V,
     ) -> Result<(), InsertFailErr> {
-        assert_hint(!inner.is_null(), "null pointer is provided to `insert_or_fail`");
+        assert_hint(
+            !inner.is_null(),
+            "null pointer is provided to `insert_or_fail`",
+        );
 
         let idx = Self::get_started_slot_idx_for_key(key, capacity);
         let slot_ptr = Self::get_slot_ptr(inner, capacity, idx);
         let slot = unsafe { &mut *slot_ptr };
 
         if likely(slot.key == usize::MAX) {
-            unsafe { slot_ptr.write(Slot { key, value: value_ptr.read() }) }
+            unsafe {
+                slot_ptr.write(Slot {
+                    key,
+                    value: value_ptr.read(),
+                })
+            }
 
             Ok(())
         } else if unlikely(key == slot.key) {
             Err(InsertFailErr::KeyAlreadyExists)
-        } else { // slot.key != usize::MAX && slot.key != key = occupied by another key
+        } else {
+            // slot.key != usize::MAX && slot.key != key = occupied by another key
             Err(InsertFailErr::NotEnoughSpace)
         }
     }
@@ -249,9 +259,7 @@ impl<V> NumberKeyMap<V> {
         let mut new_capacity = Self::greater_capacity(self.capacity);
 
         'allocate: loop {
-            let layout = unwrap_or_bug_hint(
-                Layout::array::<Slot<V>>(new_capacity)
-            );
+            let layout = unwrap_or_bug_hint(Layout::array::<Slot<V>>(new_capacity));
             // It is more expensive to first check if the capacity is good enough
             // for zero-misses and only after allocate and insert
             // than inserts from the start and reallocate if needed.
@@ -270,17 +278,12 @@ impl<V> NumberKeyMap<V> {
 
                 if slot.key != usize::MAX {
                     let res = unsafe {
-                        Self::insert_or_fail(
-                            new_inner,
-                            new_capacity,
-                            slot.key,
-                            &slot.value
-                        )
+                        Self::insert_or_fail(new_inner, new_capacity, slot.key, &slot.value)
                     };
                     if unlikely(res.is_err()) {
                         assert_hint(
                             matches!(res, Err(InsertFailErr::NotEnoughSpace)),
-                            "invalid inner state is detected while reallocating: duplicate key"
+                            "invalid inner state is detected while reallocating: duplicate key",
                         );
 
                         // We should reallocate
@@ -294,20 +297,13 @@ impl<V> NumberKeyMap<V> {
             }
 
             // We recopied all the values, but we need to insert one more item.
-            let res = unsafe {
-                Self::insert_or_fail(
-                    new_inner,
-                    new_capacity,
-                    key,
-                    &value
-                )
-            };
+            let res = unsafe { Self::insert_or_fail(new_inner, new_capacity, key, &value) };
 
             let mut commit_reallocate = || {
                 unsafe {
                     dealloc(
                         self.inner.cast(),
-                        unwrap_or_bug_hint(Layout::array::<Slot<V>>(self.capacity))
+                        unwrap_or_bug_hint(Layout::array::<Slot<V>>(self.capacity)),
                     )
                 };
 
@@ -353,9 +349,7 @@ impl<V> NumberKeyMap<V> {
     fn insert_first(&mut self, key: usize, value: V) {
         Self::validate_key(key);
 
-        let layout = unwrap_or_bug_hint(
-            Layout::array::<Slot<V>>(1)
-        );
+        let layout = unwrap_or_bug_hint(Layout::array::<Slot<V>>(1));
         let inner: *mut Slot<V> = unsafe { alloc(layout) }.cast();
         unsafe { inner.write(Slot { key, value }) };
 
@@ -386,9 +380,7 @@ impl<V> NumberKeyMap<V> {
             return Ok(());
         }
 
-        let res = unsafe {
-            Self::insert_or_fail(self.inner, self.capacity, key, &value)
-        };
+        let res = unsafe { Self::insert_or_fail(self.inner, self.capacity, key, &value) };
         if likely(res.is_ok()) {
             mem::forget(value);
 
@@ -416,7 +408,6 @@ impl<V> NumberKeyMap<V> {
 
         Some(unsafe { ptr::read(&slot.value) })
     }
-
 
     /// Clears the [`NumberKeyMap`] with the provided function.
     pub fn clear_with(&mut self, func: impl Fn((usize, V))) {
@@ -659,9 +650,9 @@ impl<V> Drop for NumberKeyMap<V> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use std::cell::Cell;
     use std::rc::Rc;
-    use super::*;
 
     #[derive(Debug)]
     struct DropCounter(usize, Rc<Cell<usize>>);

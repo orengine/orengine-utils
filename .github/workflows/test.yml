@@ -18,5 +18,7 @@ jobs:
           toolchain: 1.83.0
       - name: Clippy (x86)
         run: cargo clippy --all-targets --all-features -- -D warnings
-      - name: Test (x86)
+      - name: Test (x86) default
+        run: cargo test --all-targets -- --test-threads=1
+      - name: Test (x86) all features (including no_std)
         run: cargo test --all-targets --all-features -- --test-threads=1

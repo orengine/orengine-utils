@@ -1,6 +1,6 @@
 [package]
 name = "orengine-utils"
-version = "1.12.1"
+version = "1.13.0"
 edition = "2021"
 description = "This repository provides utilities for building high-performance applications."
 repository = "https://github.com/orengine/orengine-utils"
@@ -10,6 +10,10 @@ categories = ["concurrency"]
 authors = ["Eugene Usachev <https://github.com/Eugene-Usachev> and orengine contributors <team@orengine>"]
 readme = "README.md"
 rust-version = "1.83.0"
+
+[features]
+default = []
+no_std = []
 
 [dependencies]
 libc = ">=0.2.169"
