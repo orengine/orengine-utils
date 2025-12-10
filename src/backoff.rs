@@ -49,7 +49,7 @@ impl Backoff {
     #[inline]
     pub fn spin(&self) {
         for _ in 0..1 << self.step.get().min(SPIN_LIMIT) {
-            std::hint::spin_loop();
+            core::hint::spin_loop();
         }
 
         self.step.set(self.step.get() + 1);
@@ -58,7 +58,7 @@ impl Backoff {
     /// It [`spins`](Self::spin) or calls the provided function if
     /// it [`should be used`](Self::is_completed).
     ///
-    /// If the provided function is [`std::thread::yield_now`],
+    /// If the provided function is [`core::thread::yield_now`],
     /// then this function has the same behaviour as [`snooze`](Self::snooze).
     #[inline]
     pub fn spin_or<F>(&self, f: F)
@@ -67,7 +67,7 @@ impl Backoff {
     {
         if likely(self.step.get() < SPIN_LIMIT) {
             for _ in 0..1 << self.step.get().min(SPIN_LIMIT) {
-                std::hint::spin_loop();
+                core::hint::spin_loop();
             }
         } else {
             f();
@@ -92,7 +92,11 @@ impl Backoff {
     /// [`is_completed`]: Backoff::is_completed
     #[inline]
     pub fn snooze(&self) {
+        #[cfg(not(feature = "no_std"))]
         self.spin_or(std::thread::yield_now);
+
+        #[cfg(feature = "no_std")]
+        self.spin();
     }
 
     /// Returns `true` if exponential backoff has completed and blocking the thread is advised.

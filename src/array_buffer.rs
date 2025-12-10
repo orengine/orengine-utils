@@ -1,8 +1,8 @@
 //! This module contains the [`ArrayBuffer`].
 use crate::hints::{assert_hint, likely, unlikely};
-use std::mem::MaybeUninit;
-use std::ops::{Deref, DerefMut};
-use std::mem;
+use core::mem;
+use core::mem::MaybeUninit;
+use core::ops::{Deref, DerefMut};
 
 /// `ArrayBuffer` is a fixed-sized array-based buffer.
 ///
@@ -61,7 +61,6 @@ impl<T, const N: usize> ArrayBuffer<T, N> {
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
-
 
     /// Appends an element to the buffer.
     ///
@@ -135,7 +134,9 @@ impl<T, const N: usize> ArrayBuffer<T, N> {
                 if likely(self.current < self.end) {
                     let item = unsafe { &*self.current };
 
-                    unsafe { self.current = self.current.add(1); }
+                    unsafe {
+                        self.current = self.current.add(1);
+                    }
 
                     Some(item)
                 } else {
@@ -180,7 +181,9 @@ impl<T, const N: usize> ArrayBuffer<T, N> {
                 if likely(self.current < self.end) {
                     let item = unsafe { &mut *self.current };
 
-                    unsafe { self.current = self.current.add(1); }
+                    unsafe {
+                        self.current = self.current.add(1);
+                    }
 
                     Some(item)
                 } else {
@@ -217,7 +220,10 @@ impl<T, const N: usize> ArrayBuffer<T, N> {
     ///
     /// The caller must ensure that the buffer is empty before refilling.
     pub unsafe fn refill_with(&mut self, f: impl FnOnce(&mut [MaybeUninit<T>; N]) -> usize) {
-        debug_assert!(self.is_empty(), "ArrayBuffer should be empty before refilling");
+        debug_assert!(
+            self.is_empty(),
+            "ArrayBuffer should be empty before refilling"
+        );
 
         let filled = f(&mut self.array);
 
@@ -234,7 +240,6 @@ impl<T, const N: usize> ArrayBuffer<T, N> {
     fn as_mut_slice_ptr(&mut self) -> *mut [T; N] {
         (&raw mut self.array).cast()
     }
-
 }
 
 impl<T, const N: usize> Deref for ArrayBuffer<T, N> {
@@ -287,6 +292,8 @@ impl<T, const N: usize> Drop for ArrayBuffer<T, N> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::vec;
+    use alloc::vec::Vec;
 
     #[test]
     fn test_array_buffer_pop_push_len() {
@@ -333,7 +340,10 @@ mod tests {
         }
 
         assert_eq!(buffer.iter().collect::<Vec<_>>(), vec![&1, &2, &3, &4]);
-        assert_eq!(buffer.iter_mut().collect::<Vec<_>>(), vec![&mut 1, &mut 2, &mut 3, &mut 4]);
+        assert_eq!(
+            buffer.iter_mut().collect::<Vec<_>>(),
+            vec![&mut 1, &mut 2, &mut 3, &mut 4]
+        );
     }
 
     #[test]
@@ -341,12 +351,12 @@ mod tests {
         let mut buffer = ArrayBuffer::<u32, 4>::new();
 
         unsafe {
-        buffer.refill_with(|array| {
+            buffer.refill_with(|array| {
                 array.copy_from_slice(&[
                     MaybeUninit::new(1),
                     MaybeUninit::new(2),
                     MaybeUninit::new(3),
-                    MaybeUninit::new(4)
+                    MaybeUninit::new(4),
                 ]);
 
                 4

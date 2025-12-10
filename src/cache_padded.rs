@@ -1,5 +1,5 @@
 //! Provides cache-padded atomic types.
-use std::sync::atomic::{
+use core::sync::atomic::{
     AtomicI16, AtomicI32, AtomicI64, AtomicI8, AtomicIsize, AtomicPtr, AtomicU16, AtomicU32,
     AtomicU64, AtomicU8, AtomicUsize,
 };
@@ -92,7 +92,7 @@ macro_rules! generate_cache_padded_type {
         /// Cache padded inner type. Can be dereferenced to the inner type.
         pub struct $name {
             inner_type: $atomic,
-            _align: std::mem::MaybeUninit<
+            _align: core::mem::MaybeUninit<
                 [u8; if size_of::<$atomic>() > $crate::cache_padded::CACHE_LINE_SIZE {
                     0
                 } else {
@@ -106,12 +106,12 @@ macro_rules! generate_cache_padded_type {
             pub const fn new() -> Self {
                 Self {
                     inner_type: $default,
-                    _align: std::mem::MaybeUninit::uninit(),
+                    _align: core::mem::MaybeUninit::uninit(),
                 }
             }
         }
 
-        impl std::ops::Deref for $name {
+        impl core::ops::Deref for $name {
             type Target = $atomic;
 
             fn deref(&self) -> &Self::Target {
@@ -119,7 +119,7 @@ macro_rules! generate_cache_padded_type {
             }
         }
 
-        impl std::ops::DerefMut for $name {
+        impl core::ops::DerefMut for $name {
             fn deref_mut(&mut self) -> &mut Self::Target {
                 &mut self.inner_type
             }
@@ -148,20 +148,20 @@ generate_cache_padded_type!(CachePaddedAtomicIsize, AtomicIsize, { AtomicIsize::
 /// Cache padded inner type. Can be dereferenced to the inner type.
 pub(crate) struct CachePaddedAtomicPtr<T> {
     inner_type: AtomicPtr<T>,
-    _align: std::mem::MaybeUninit<[u8; CACHE_LINE_SIZE - size_of::<usize>()]>,
+    _align: core::mem::MaybeUninit<[u8; CACHE_LINE_SIZE - size_of::<usize>()]>,
 }
 
 impl<T> CachePaddedAtomicPtr<T> {
     /// Creates a new cache padded inner type.
     pub const fn new() -> Self {
         Self {
-            inner_type: AtomicPtr::new(std::ptr::null_mut()),
-            _align: std::mem::MaybeUninit::uninit(),
+            inner_type: AtomicPtr::new(core::ptr::null_mut()),
+            _align: core::mem::MaybeUninit::uninit(),
         }
     }
 }
 
-impl<T> std::ops::Deref for CachePaddedAtomicPtr<T> {
+impl<T> core::ops::Deref for CachePaddedAtomicPtr<T> {
     type Target = AtomicPtr<T>;
 
     fn deref(&self) -> &Self::Target {
@@ -169,7 +169,7 @@ impl<T> std::ops::Deref for CachePaddedAtomicPtr<T> {
     }
 }
 
-impl<T> std::ops::DerefMut for CachePaddedAtomicPtr<T> {
+impl<T> core::ops::DerefMut for CachePaddedAtomicPtr<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner_type
     }

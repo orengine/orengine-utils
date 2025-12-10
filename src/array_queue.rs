@@ -1,11 +1,12 @@
 //! This module contains the [`ArrayQueue`].
 use crate::hints::{assert_hint, likely, unlikely};
-use std::mem::MaybeUninit;
-use std::ops::{Deref, DerefMut};
-use std::{fmt, mem, ptr};
-use std::error::Error;
-use std::fmt::{Display, Formatter};
-use std::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
+use alloc::format;
+use core::error::Error;
+use core::fmt::{Display, Formatter};
+use core::mem::MaybeUninit;
+use core::ops::{Deref, DerefMut};
+use core::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
+use core::{fmt, mem, ptr};
 
 /// `ArrayQueue` is a queue, but it uses an array on a stack and can't be resized.
 ///
@@ -120,12 +121,16 @@ impl<T, const N: usize> ArrayQueue<T, N> {
 
         if phys_tail > phys_head {
             (
-                unsafe { &*slice_from_raw_parts(self.array.as_ptr().add(phys_head).cast(), self.len) },
+                unsafe {
+                    &*slice_from_raw_parts(self.array.as_ptr().add(phys_head).cast(), self.len)
+                },
                 &[],
             )
         } else {
             (
-                unsafe { &*slice_from_raw_parts(self.array.as_ptr().add(phys_head).cast(), N - phys_head) },
+                unsafe {
+                    &*slice_from_raw_parts(self.array.as_ptr().add(phys_head).cast(), N - phys_head)
+                },
                 unsafe { &*slice_from_raw_parts(self.array.as_ptr().cast(), phys_tail) },
             )
         }
@@ -165,13 +170,25 @@ impl<T, const N: usize> ArrayQueue<T, N> {
 
         if phys_tail > phys_head {
             (
-                unsafe { &mut *slice_from_raw_parts_mut(self.array.as_mut_ptr().add(phys_head).cast(), self.len) },
+                unsafe {
+                    &mut *slice_from_raw_parts_mut(
+                        self.array.as_mut_ptr().add(phys_head).cast(),
+                        self.len,
+                    )
+                },
                 &mut [],
             )
         } else {
             (
-                unsafe { &mut *slice_from_raw_parts_mut(self.array.as_mut_ptr().add(phys_head).cast(), N - phys_head) },
-                unsafe { &mut *slice_from_raw_parts_mut(self.array.as_mut_ptr().cast(), phys_tail) },
+                unsafe {
+                    &mut *slice_from_raw_parts_mut(
+                        self.array.as_mut_ptr().add(phys_head).cast(),
+                        N - phys_head,
+                    )
+                },
+                unsafe {
+                    &mut *slice_from_raw_parts_mut(self.array.as_mut_ptr().cast(), phys_tail)
+                },
             )
         }
     }
@@ -481,7 +498,10 @@ impl<T, const N: usize> ArrayQueue<T, N> {
             }
 
             fn size_hint(&self) -> (usize, Option<usize>) {
-                (self.queue.len - self.iterated, Some(self.queue.len - self.iterated))
+                (
+                    self.queue.len - self.iterated,
+                    Some(self.queue.len - self.iterated),
+                )
             }
         }
 
@@ -513,14 +533,19 @@ impl<T, const N: usize> ArrayQueue<T, N> {
 
                     self.iterated += 1;
 
-                    Some(unsafe { &mut *(self.queue.array.get_unchecked_mut(idx) as *mut _ as *mut T) })
+                    Some(unsafe {
+                        &mut *ptr::from_mut(self.queue.array.get_unchecked_mut(idx)).cast::<T>()
+                    })
                 } else {
                     None
                 }
             }
 
             fn size_hint(&self) -> (usize, Option<usize>) {
-                (self.queue.len - self.iterated, Some(self.queue.len - self.iterated))
+                (
+                    self.queue.len - self.iterated,
+                    Some(self.queue.len - self.iterated),
+                )
             }
         }
 
@@ -542,7 +567,10 @@ impl<T, const N: usize> ArrayQueue<T, N> {
     ///
     /// The caller must ensure that the queue is empty before refilling.
     pub unsafe fn refill_with(&mut self, f: impl FnOnce(&mut [MaybeUninit<T>; N]) -> usize) {
-        debug_assert!(self.is_empty(), "ArrayQueue should be empty before refilling");
+        debug_assert!(
+            self.is_empty(),
+            "ArrayQueue should be empty before refilling"
+        );
 
         let filled = f(&mut self.array);
 
@@ -556,7 +584,7 @@ impl<T, const N: usize> ArrayQueue<T, N> {
     fn as_slice_ptr(&self) -> *const [T; N] {
         (&raw const self.array).cast()
     }
-    
+
     /// Returns a mutable pointer to the underlying array.
     fn as_mut_slice_ptr(&mut self) -> *mut [T; N] {
         (&raw mut self.array).cast()
@@ -614,6 +642,8 @@ impl<T, const N: usize> Drop for ArrayQueue<T, N> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::vec;
+    use alloc::vec::Vec;
 
     #[test]
     fn test_array_queue() {
@@ -660,7 +690,10 @@ mod tests {
         }
 
         assert_eq!(queue.iter().collect::<Vec<_>>(), vec![&1, &2, &3, &4]);
-        assert_eq!(queue.iter_mut().collect::<Vec<_>>(), vec![&mut 1, &mut 2, &mut 3, &mut 4]);
+        assert_eq!(
+            queue.iter_mut().collect::<Vec<_>>(),
+            vec![&mut 1, &mut 2, &mut 3, &mut 4]
+        );
     }
 
     #[test]
@@ -668,12 +701,12 @@ mod tests {
         let mut queue = ArrayQueue::<u32, 4>::new();
 
         unsafe {
-        queue.refill_with(|array| {
+            queue.refill_with(|array| {
                 array.copy_from_slice(&[
                     MaybeUninit::new(1),
                     MaybeUninit::new(2),
                     MaybeUninit::new(3),
-                    MaybeUninit::new(4)
+                    MaybeUninit::new(4),
                 ]);
 
                 4
@@ -690,7 +723,9 @@ mod tests {
         {
             let mut q = ArrayQueue::<usize, 8>::new();
 
-            unsafe { q.extend_from_slice(&[1, 2, 3]).unwrap(); }
+            unsafe {
+                q.extend_from_slice(&[1, 2, 3]).unwrap();
+            }
 
             assert_eq!(q.len(), 3);
 
@@ -700,7 +735,9 @@ mod tests {
 
             // With the updated head index
 
-            unsafe { q.extend_from_slice(&[1, 2, 3]).unwrap(); }
+            unsafe {
+                q.extend_from_slice(&[1, 2, 3]).unwrap();
+            }
 
             assert_eq!(q.len(), 3);
 
@@ -713,7 +750,9 @@ mod tests {
         {
             let mut q = ArrayQueue::<usize, 8>::new();
 
-            unsafe { q.extend_from_slice(&[1, 2, 3, 4, 5, 6, 7]).unwrap(); };
+            unsafe {
+                q.extend_from_slice(&[1, 2, 3, 4, 5, 6, 7]).unwrap();
+            };
 
             q.pop().unwrap();
             q.pop().unwrap();
@@ -722,7 +761,9 @@ mod tests {
 
             assert_eq!(q.len(), 3);
 
-            unsafe { q.extend_from_slice(&[50, 51, 52, 53, 54]).unwrap(); }
+            unsafe {
+                q.extend_from_slice(&[50, 51, 52, 53, 54]).unwrap();
+            }
 
             assert_eq!(q.len(), 8);
 
@@ -738,9 +779,11 @@ mod tests {
         {
             let mut q = ArrayQueue::<usize, 4>::new();
 
-            unsafe { q.extend_from_slice(&[1, 2, 3]).unwrap(); };
+            unsafe {
+                q.extend_from_slice(&[1, 2, 3]).unwrap();
+            };
 
-            assert!(unsafe { q.extend_from_slice(&[9,9]) }.is_err());
+            assert!(unsafe { q.extend_from_slice(&[9, 9]) }.is_err());
             assert_eq!(q.len(), 3, "len must remain unchanged");
         }
     }

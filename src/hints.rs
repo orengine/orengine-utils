@@ -1,6 +1,6 @@
 //! Hints to the compiler that affects how code should be emitted or optimized.
 
-/// Do the same as [`assert_unchecked`](std::hint::assert_unchecked), but instead of UB,
+/// Do the same as [`assert_unchecked`](core::hint::assert_unchecked), but instead of UB,
 /// it panics with `debug_assertions`.
 ///
 /// # Panics
@@ -13,11 +13,11 @@ pub fn assert_hint(cond: bool, debug_msg: &str) {
     if cfg!(debug_assertions) {
         assert!(cond, "{debug_msg}");
     } else {
-        unsafe { std::hint::assert_unchecked(cond) };
+        unsafe { core::hint::assert_unchecked(cond) };
     }
 }
 
-/// Do the same as [`unreachable_unchecked`](std::hint::unreachable_unchecked), but instead of UB,
+/// Do the same as [`unreachable_unchecked`](core::hint::unreachable_unchecked), but instead of UB,
 /// it panics with `debug_assertions`.
 ///
 /// # Panics
@@ -30,7 +30,7 @@ pub fn unreachable_hint() -> ! {
     if cfg!(debug_assertions) {
         unreachable!();
     } else {
-        unsafe { std::hint::unreachable_unchecked() }
+        unsafe { core::hint::unreachable_unchecked() }
     }
 }
 
