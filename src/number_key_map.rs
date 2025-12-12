@@ -231,7 +231,7 @@ impl<V> NumberKeyMap<V> {
                 slot_ptr.write(Slot {
                     key,
                     value: value_ptr.read(),
-                })
+                });
             }
 
             Ok(())
@@ -304,7 +304,7 @@ impl<V> NumberKeyMap<V> {
                     dealloc(
                         self.inner.cast(),
                         unwrap_or_bug_hint(Layout::array::<Slot<V>>(self.capacity)),
-                    )
+                    );
                 };
 
                 self.inner = new_inner;
@@ -439,96 +439,6 @@ impl<V> Default for NumberKeyMap<V> {
 }
 
 /// An iterator over the [`NumberKeyMap`].
-/// The item of this iterator is `(key, &value)`.
-pub struct Iter<'a, V> {
-    ptr: *mut Slot<V>,
-    end: *mut Slot<V>,
-    _marker: std::marker::PhantomData<&'a V>,
-}
-
-impl<'a, V> Iterator for Iter<'a, V> {
-    type Item = (usize, &'a V);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        unsafe {
-            while self.ptr < self.end {
-                let slot = &*self.ptr;
-
-                self.ptr = self.ptr.add(1);
-
-                if slot.key != usize::MAX {
-                    return Some((slot.key, &slot.value));
-                }
-            }
-
-            None
-        }
-    }
-}
-
-/// An iterator over the [`NumberKeyMap`].
-/// The item of this iterator is `(key, &mut value)`.
-pub struct IterMut<'a, V> {
-    ptr: *mut Slot<V>,
-    end: *mut Slot<V>,
-    _marker: std::marker::PhantomData<&'a mut V>,
-}
-
-impl<'a, V> Iterator for IterMut<'a, V> {
-    type Item = (usize, &'a mut V);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        unsafe {
-            while self.ptr < self.end {
-                let slot = &mut *self.ptr;
-
-                self.ptr = self.ptr.add(1);
-
-                if slot.key != usize::MAX {
-                    return Some((slot.key, &mut slot.value));
-                }
-            }
-
-            None
-        }
-    }
-}
-
-/// A drain iterator over the [`NumberKeyMap`].
-/// The item of this iterator is `(key, value)`.
-///
-/// This iterator removes items from the [`NumberKeyMap`].
-pub struct Drain<'a, V> {
-    ptr: *mut Slot<V>,
-    end: *mut Slot<V>,
-    _marker: std::marker::PhantomData<&'a mut V>,
-}
-
-impl<V> Iterator for Drain<'_, V> {
-    type Item = (usize, V);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        unsafe {
-            while self.ptr < self.end {
-                let slot = &mut *self.ptr;
-
-                self.ptr = self.ptr.add(1);
-
-                if slot.key != usize::MAX {
-                    let key = slot.key;
-
-                    slot.key = usize::MAX;
-
-                    return Some((key, ptr::read(&slot.value)));
-                }
-            }
-
-            None
-        }
-    }
-}
-
-/// An iterator over the [`NumberKeyMap`].
 /// The item of this iterator is `(key, value)`.
 ///
 /// This iterator consumes the [`NumberKeyMap`].
@@ -577,29 +487,113 @@ impl<V> Drop for IntoIter<V> {
 
 impl<V> NumberKeyMap<V> {
     /// Iterate immutably over all `(key, &value)`.
-    pub fn iter(&self) -> Iter<'_, V> {
+    pub fn iter(&self) -> impl Iterator<Item = (usize, &V)> {
+        struct Iter<'a, V> {
+            ptr: *mut Slot<V>,
+            end: *mut Slot<V>,
+            _marker: core::marker::PhantomData<&'a V>,
+        }
+
+        impl<'a, V> Iterator for Iter<'a, V> {
+            type Item = (usize, &'a V);
+
+            fn next(&mut self) -> Option<Self::Item> {
+                unsafe {
+                    while self.ptr < self.end {
+                        let slot = &*self.ptr;
+
+                        self.ptr = self.ptr.add(1);
+
+                        if slot.key != usize::MAX {
+                            return Some((slot.key, &slot.value));
+                        }
+                    }
+
+                    None
+                }
+            }
+        }
+
         Iter {
             ptr: self.inner,
             end: unsafe { self.inner.add(self.capacity) },
-            _marker: std::marker::PhantomData,
+            _marker: core::marker::PhantomData,
         }
     }
 
     /// Iterate mutably over all `(key, &mut value)`.
-    pub fn iter_mut(&mut self) -> IterMut<'_, V> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (usize, &mut V)> {
+        struct IterMut<'a, V> {
+            ptr: *mut Slot<V>,
+            end: *mut Slot<V>,
+            _marker: core::marker::PhantomData<&'a mut V>,
+        }
+
+        impl<'a, V: 'a> Iterator for IterMut<'a, V> {
+            type Item = (usize, &'a mut V);
+
+            fn next(&mut self) -> Option<Self::Item> {
+                unsafe {
+                    while self.ptr < self.end {
+                        let slot = &mut *self.ptr;
+
+                        self.ptr = self.ptr.add(1);
+
+                        if slot.key != usize::MAX {
+                            return Some((slot.key, &mut slot.value));
+                        }
+                    }
+
+                    None
+                }
+            }
+        }
+
         IterMut {
             ptr: self.inner,
             end: unsafe { self.inner.add(self.capacity) },
-            _marker: std::marker::PhantomData,
+            _marker: core::marker::PhantomData,
         }
     }
+}
 
+impl<V: 'static> NumberKeyMap<V> {
     /// Remove all entries and yield owned `(key, value)`.
-    pub fn drain(&mut self) -> Drain<'_, V> {
+    pub fn drain(&mut self) -> impl Iterator<Item = (usize, V)> {
+        struct Drain<'a, V> {
+            ptr: *mut Slot<V>,
+            end: *mut Slot<V>,
+            _marker: core::marker::PhantomData<&'a mut V>,
+        }
+
+        impl<V: 'static> Iterator for Drain<'_, V> {
+            type Item = (usize, V);
+
+            fn next(&mut self) -> Option<Self::Item> {
+                unsafe {
+                    while self.ptr < self.end {
+                        let slot = &mut *self.ptr;
+
+                        self.ptr = self.ptr.add(1);
+
+                        if slot.key != usize::MAX {
+                            let key = slot.key;
+
+                            slot.key = usize::MAX;
+
+                            return Some((key, ptr::read(&slot.value)));
+                        }
+                    }
+
+                    None
+                }
+            }
+        }
+
         Drain {
             ptr: self.inner,
             end: unsafe { self.inner.add(self.capacity) },
-            _marker: std::marker::PhantomData,
+            _marker: core::marker::PhantomData,
         }
     }
 }
@@ -651,8 +645,11 @@ impl<V> Drop for NumberKeyMap<V> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::cell::Cell;
-    use std::rc::Rc;
+
+    use alloc::rc::Rc;
+    #[cfg(feature = "no_std")]
+    use alloc::vec::Vec;
+    use core::cell::Cell;
 
     #[derive(Debug)]
     struct DropCounter(usize, Rc<Cell<usize>>);
@@ -671,7 +668,7 @@ mod tests {
         let drops = Rc::new(Cell::new(0));
 
         for i in 0..N {
-            assert!(m.insert(i, DropCounter(i, drops.clone())).is_ok());
+            m.insert(i, DropCounter(i, drops.clone())).unwrap();
 
             assert_eq!(m.get(i).map(|v| v.0), Some(i));
             assert_eq!(m.get_mut(i).map(|v| v.0), Some(i));
@@ -701,7 +698,7 @@ mod tests {
         let k = 1usize;
         let drops = Rc::new(Cell::new(0));
 
-        assert!(m.insert(k, DropCounter(10, drops.clone())).is_ok());
+        m.insert(k, DropCounter(10, drops.clone())).unwrap();
         assert!(m.insert(k, DropCounter(20, drops.clone())).is_err());
 
         // original value remains
@@ -720,7 +717,7 @@ mod tests {
         let drops = Rc::new(Cell::new(0));
 
         for i in 0..1_000_000 {
-            assert!(m.insert(i, DropCounter(i, drops.clone())).is_ok());
+            m.insert(i, DropCounter(i, drops.clone())).unwrap();
         }
 
         assert_eq!(drops.get(), 0);
@@ -787,7 +784,7 @@ mod tests {
         assert_eq!(drops.get(), 0);
 
         let mut seen = Vec::new();
-        for (k, v) in m.into_iter() {
+        for (k, v) in m {
             seen.push((k, v.0));
         }
 

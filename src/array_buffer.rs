@@ -3,6 +3,7 @@ use crate::hints::{assert_hint, likely, unlikely};
 use core::mem;
 use core::mem::MaybeUninit;
 use core::ops::{Deref, DerefMut};
+use core::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
 
 /// `ArrayBuffer` is a fixed-sized array-based buffer.
 ///
@@ -60,6 +61,16 @@ impl<T, const N: usize> ArrayBuffer<T, N> {
     /// Returns `true` if the buffer is empty.
     pub fn is_empty(&self) -> bool {
         self.len == 0
+    }
+
+    /// Returns a pointer to the first element of the buffer.
+    pub const fn as_ptr(&self) -> *const T {
+        self.array.as_ptr().cast()
+    }
+
+    /// Returns a mutable pointer to the first element of the buffer.
+    pub const fn as_mut_ptr(&mut self) -> *mut T {
+        self.array.as_mut_ptr().cast()
     }
 
     /// Appends an element to the buffer.
@@ -232,13 +243,13 @@ impl<T, const N: usize> ArrayBuffer<T, N> {
         self.len = filled;
     }
     /// Returns a pointer to the underlying array.
-    fn as_slice_ptr(&self) -> *const [T; N] {
-        (&raw const self.array).cast()
+    fn as_slice_ptr(&self) -> *const [T] {
+        slice_from_raw_parts(self.as_ptr(), self.len)
     }
 
     /// Returns a mutable pointer to the underlying array.
-    fn as_mut_slice_ptr(&mut self) -> *mut [T; N] {
-        (&raw mut self.array).cast()
+    fn as_mut_slice_ptr(&mut self) -> *mut [T] {
+        slice_from_raw_parts_mut(self.as_mut_ptr(), self.len)
     }
 }
 
@@ -295,6 +306,10 @@ mod tests {
     use alloc::vec;
     use alloc::vec::Vec;
 
+    #[allow(
+        clippy::explicit_auto_deref,
+        reason = "We test deref and deref_mut methods"
+    )]
     #[test]
     fn test_array_buffer_pop_push_len() {
         let mut buffer = ArrayBuffer::<u32, 4>::new();
@@ -302,21 +317,27 @@ mod tests {
         unsafe {
             buffer.push_unchecked(1);
             assert_eq!(buffer.len(), 1);
+            assert_eq!((*buffer).len(), 1);
 
             buffer.push_unchecked(2);
             assert_eq!(buffer.len(), 2);
+            assert_eq!((*buffer).len(), 2);
 
             buffer.push(3).unwrap();
             assert_eq!(buffer.len(), 3);
+            assert_eq!(buffer.as_ref().len(), 3);
 
             assert_eq!(buffer.pop(), Some(3));
             assert_eq!(buffer.len(), 2);
+            assert_eq!(buffer.as_mut().len(), 2);
 
             buffer.push_unchecked(4);
             assert_eq!(buffer.len(), 3);
+            assert_eq!(buffer.deref_mut().len(), 3);
 
             buffer.push_unchecked(5);
             assert_eq!(buffer.len(), 4);
+            assert_eq!(buffer.deref_mut().len(), 4);
 
             assert_eq!(buffer.push(6), Err(6));
 
