@@ -7,7 +7,7 @@
 //! use core::sync::atomic::{AtomicUsize, Ordering};
 //!
 //! // Using CachePaddedAtomicUsize type alias
-//! let counter = CachePaddedAtomicUsize::new(AtomicUsize::new(0));
+//! let counter = CachePaddedAtomicUsize::new(0);
 //!
 //! counter.fetch_add(1, Ordering::Relaxed);
 //!

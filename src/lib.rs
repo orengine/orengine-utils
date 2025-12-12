@@ -71,7 +71,6 @@ pub mod hints;
 #[cfg(not(feature = "no_std"))]
 mod instant;
 pub mod light_arc;
-#[cfg(not(feature = "no_std"))]
 pub mod number_key_map;
 mod vec_queue;
 
