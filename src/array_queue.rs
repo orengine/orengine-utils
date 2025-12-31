@@ -43,7 +43,7 @@ impl Error for NotEnoughSpace {}
 
 impl<T, const N: usize> ArrayQueue<T, N> {
     /// Creates a new `ArrayQueue`.
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         #[allow(
             clippy::uninit_assumed_init,
             reason = "We guarantee that the array is initialized when reading from it"

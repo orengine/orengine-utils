@@ -35,16 +35,10 @@ pub struct ArrayBuffer<T, const N: usize> {
 
 impl<T, const N: usize> ArrayBuffer<T, N> {
     /// Creates a new ` ArrayBuffer `.
-    pub fn new() -> Self {
-        #[allow(
-            clippy::uninit_assumed_init,
-            reason = "We guarantee that the array is initialized, when reading from it"
-        )]
-        {
-            Self {
-                array: [const { MaybeUninit::uninit() }; N],
-                len: 0,
-            }
+    pub const fn new() -> Self {
+        Self {
+            array: [const { MaybeUninit::uninit() }; N],
+            len: 0,
         }
     }
 
