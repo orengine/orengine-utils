@@ -19,7 +19,6 @@
 
 use crate::hints::unwrap_or_bug_message_hint;
 use core::iter::Iterator;
-use std::mem::MaybeUninit;
 
 #[cfg(not(feature = "more_numa_nodes"))]
 pub const MAX_NUMA_NODES_SUPPORTED_: usize = 64;
@@ -32,7 +31,7 @@ pub const MAX_NUMA_NODES_SUPPORTED_: usize = 1024;
 /// or UB otherwise.
 pub const MAX_NUMA_NODES_SUPPORTED: usize = MAX_NUMA_NODES_SUPPORTED_;
 
-const NUMA_NODE_TOO_LARGE: &'static str = "this hardware supports more NUMA-nodes than expected, use the `more_numa_nodes` feature to increase the limit";
+const NUMA_NODE_TOO_LARGE: &str = "this hardware supports more NUMA-nodes than expected, use the `more_numa_nodes` feature to increase the limit";
 
 /// Manages data per NUMA node.
 /// It allows storing data for each NUMA node and accessing it by the NUMA node ID.
@@ -112,6 +111,8 @@ impl<T: Default> Default for DataPerNUMANodeManager<T> {
 pub fn get_current_thread_numa_node() -> usize {
     #[cfg(target_os = "linux")]
     {
+        use core::mem::MaybeUninit;
+
         let mut numa_node: MaybeUninit<u32> = MaybeUninit::uninit();
 
         unsafe {
@@ -135,17 +136,18 @@ pub fn get_current_thread_numa_node() -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::vec::Vec;
 
     #[test]
     fn test_data_per_numa_node_manager_iterators() {
         let mut arr = [1i32; MAX_NUMA_NODES_SUPPORTED];
-        for i in 0..8 {
-            arr[i] = (i + 1) as i32;
+        for (i, item) in arr.iter_mut().enumerate().take(8) {
+            *item = i32::try_from(i + 1).unwrap();
         }
         let mut manager = DataPerNUMANodeManager::from_arr(arr);
 
         // Test iter()
-        let values: Vec<i32> = manager.iter().cloned().collect();
+        let values: Vec<i32> = manager.iter().copied().collect();
         assert_eq!(values[0], 1);
         assert_eq!(values[7], 8);
         assert_eq!(values[8], 1); // rest should be default (1)
@@ -178,7 +180,7 @@ mod tests {
     #[test]
     fn test_get_current_thread_numa_node() {
         let node_id = get_current_thread_numa_node();
-        println!("Current thread is on NUMA node {}", node_id);
+        assert!(node_id < 1024, "node: {node_id}");
     }
 
     #[test]

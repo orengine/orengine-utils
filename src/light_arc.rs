@@ -50,7 +50,7 @@ impl<T> LightArc<T> {
         core::sync::atomic::fence(Ordering::Acquire);
 
         unsafe {
-            ptr::drop_in_place(&mut self.inner.as_mut().value);
+            ptr::drop_in_place(&raw mut self.inner.as_mut().value);
 
             dealloc(
                 self.inner.as_ptr().cast(),

@@ -302,10 +302,18 @@ cache_padded_atomic_number!(CachePaddedAtomicBool, AtomicBool, bool);
     rustdoc::redundant_explicit_links,
     reason = "It is needed for right IDE doc formating"
 )]
+#[allow(
+    clippy::doc_link_code,
+    reason = "It is needed for right IDE doc formating"
+)]
 /// Alias to [`CachePadded`](CachePadded)`<`[`AtomicPtr`](AtomicPtr)`<T>>`.
 pub struct CachePaddedAtomicPtr<T>(CachePadded<AtomicPtr<T>>);
 
 impl<T> CachePaddedAtomicPtr<T> {
+    #[allow(
+        clippy::doc_link_code,
+        reason = "It is needed for right IDE doc formating"
+    )]
     /// Creates a new [`CachePadded`](CachePadded)`<`[`AtomicPtr`](AtomicPtr)`<T>>`.
     #[inline(always)]
     pub const fn new(ptr: *mut T) -> Self {
