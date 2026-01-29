@@ -11,6 +11,7 @@
 //! - The [`VecQueue`] that is a vector-based queue implementation.
 //! - The [`NumberKeyMap`] that is a compact open-addressing map specialized for `usize`
 //!   keys optimized for zero-misses and so optimized for 99+% reading operations.
+//! - The [`numa module`](numa) provides sufficient utilities for working with NUMA nodes.
 //! - Configuration macros that are used to right compile the program based on the target platform
 //!   such as [`config_target_pointer_width_64`], [`config_target_pointer_width_32`], and
 //!   [`config_target_pointer_width_16`].
@@ -60,6 +61,7 @@
 )]
 
 extern crate alloc;
+extern crate core;
 
 mod array_buffer;
 mod array_queue;
@@ -71,6 +73,7 @@ pub mod hints;
 #[cfg(not(feature = "no_std"))]
 mod instant;
 pub mod light_arc;
+pub mod numa;
 pub mod number_key_map;
 mod vec_queue;
 

@@ -16,6 +16,7 @@ This repository provides utilities for building high-performance applications.
   an array-based queue implementation.
 - **[`vec_queue`](./src/vec_queue.rs)** — provides the [`VecQueue`](./src/vec_queue.rs) type,
   a vector-based queue implementation.
+- **[`numa`](./src/numa.rs)** — provides sufficient utilities for working with NUMA nodes.
 - **[`config_macro`](./src/config_macro.rs)** — provides the `config_target_pointer_width_64`, 
     `config_target_pointer_width_32`, and `config_target_pointer_width_16` macros, 
   which are used to right compile the program based on the target platform.

@@ -14,6 +14,8 @@ rust-version = "1.83.0"
 [features]
 default = []
 no_std = []
+numa = []
+more_numa_nodes = []
 
 [dependencies]
-libc = ">=0.2.169"
+libc = ">=0.2.169" # TODO after https://github.com/bytecodealliance/rustix/pull/1575 is merged switch to rustix because it is more performant
