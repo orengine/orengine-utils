@@ -278,7 +278,12 @@ impl<V> NumberKeyMap<V> {
 
                 if slot.key != usize::MAX {
                     let res = unsafe {
-                        Self::insert_or_fail(new_inner, new_capacity, slot.key, &slot.value)
+                        Self::insert_or_fail(
+                            new_inner,
+                            new_capacity,
+                            slot.key,
+                            &raw const slot.value,
+                        )
                     };
                     if unlikely(res.is_err()) {
                         assert_hint(
@@ -297,7 +302,8 @@ impl<V> NumberKeyMap<V> {
             }
 
             // We recopied all the values, but we need to insert one more item.
-            let res = unsafe { Self::insert_or_fail(new_inner, new_capacity, key, &value) };
+            let res =
+                unsafe { Self::insert_or_fail(new_inner, new_capacity, key, &raw const value) };
 
             let mut commit_reallocate = || {
                 unsafe {
@@ -328,7 +334,7 @@ impl<V> NumberKeyMap<V> {
 
                     unsafe { dealloc(new_inner.cast(), layout) };
 
-                    continue 'allocate;
+                    // continue 'allocate;
                 }
 
                 Err(InsertFailErr::KeyAlreadyExists) => {
@@ -380,7 +386,7 @@ impl<V> NumberKeyMap<V> {
             return Ok(());
         }
 
-        let res = unsafe { Self::insert_or_fail(self.inner, self.capacity, key, &value) };
+        let res = unsafe { Self::insert_or_fail(self.inner, self.capacity, key, &raw const value) };
         if likely(res.is_ok()) {
             mem::forget(value);
 
@@ -406,7 +412,7 @@ impl<V> NumberKeyMap<V> {
 
         slot.key = usize::MAX;
 
-        Some(unsafe { ptr::read(&slot.value) })
+        Some(unsafe { ptr::read(&raw const slot.value) })
     }
 
     /// Clears the [`NumberKeyMap`] with the provided function.
@@ -420,7 +426,7 @@ impl<V> NumberKeyMap<V> {
             let slot = unsafe { &mut *slot_ptr };
 
             if slot.key != usize::MAX {
-                func((slot.key, unsafe { ptr::read(&slot.value) }));
+                func((slot.key, unsafe { ptr::read(&raw const slot.value) }));
                 slot.key = usize::MAX;
             }
         }
@@ -460,7 +466,7 @@ impl<V> Iterator for IntoIter<V> {
                 self.i += 1;
 
                 if slot.key != usize::MAX {
-                    return Some((slot.key, ptr::read(&slot.value)));
+                    return Some((slot.key, ptr::read(&raw const slot.value)));
                 }
             }
 
@@ -581,7 +587,7 @@ impl<V: 'static> NumberKeyMap<V> {
 
                             slot.key = usize::MAX;
 
-                            return Some((key, ptr::read(&slot.value)));
+                            return Some((key, ptr::read(&raw const slot.value)));
                         }
                     }
 
