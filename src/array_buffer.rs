@@ -57,6 +57,21 @@ impl<T, const N: usize> ArrayBuffer<T, N> {
         self.len == 0
     }
 
+    /// Forces the length of the buffer to `new_len`.
+    ///
+    /// # Safety
+    ///
+    /// - `new_len` must be less than or equal to `N`.
+    /// - The elements at `old_len..new_len` must be initialized.
+    pub unsafe fn set_len(&mut self, new_len: usize) {
+        debug_assert!(
+            new_len <= self.capacity(),
+            "provided len is more than the capacity: {new_len} > {N}"
+        );
+
+        self.len = new_len;
+    }
+
     /// Returns a pointer to the first element of the buffer.
     pub const fn as_ptr(&self) -> *const T {
         self.array.as_ptr().cast()
@@ -380,5 +395,14 @@ mod tests {
 
         assert_eq!(buffer.len(), 4);
         assert_eq!(buffer.iter().collect::<Vec<_>>(), vec![&1, &2, &3, &4]);
+    }
+
+    #[test]
+    fn test_array_buffer_set_len() {
+        let mut buffer = ArrayBuffer::<u32, 4>::new();
+
+        unsafe { buffer.set_len(1) };
+
+        assert_eq!(buffer.len(), 1);
     }
 }
