@@ -10,7 +10,7 @@ use core::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
 /// # Example
 ///
 /// ```rust
-/// use std::mem::MaybeUninit;
+/// use core::mem::MaybeUninit;
 /// use orengine_utils::ArrayBuffer;
 ///
 /// let mut buffer = ArrayBuffer::<u16, 4>::new();
@@ -141,22 +141,20 @@ impl<T, const N: usize> ArrayBuffer<T, N> {
 
     /// Returns a reference iterator over the buffer.
     pub fn iter(&self) -> impl ExactSizeIterator<Item = &T> {
-        struct Iter<'array_buffer, T, const N: usize> {
-            buffer: &'array_buffer ArrayBuffer<T, N>,
+        struct Iter<'array_buffer, T> {
             current: *const T,
             end: *const T,
+            _marker: core::marker::PhantomData<&'array_buffer T>,
         }
 
-        impl<'array_buffer, T, const N: usize> Iterator for Iter<'array_buffer, T, N> {
+        impl<'array_buffer, T> Iterator for Iter<'array_buffer, T> {
             type Item = &'array_buffer T;
 
             fn next(&mut self) -> Option<Self::Item> {
                 if likely(self.current < self.end) {
                     let item = unsafe { &*self.current };
 
-                    unsafe {
-                        self.current = self.current.add(1);
-                    }
+                    self.current = unsafe { self.current.add(1) };
 
                     Some(item)
                 } else {
@@ -165,45 +163,48 @@ impl<T, const N: usize> ArrayBuffer<T, N> {
             }
 
             fn size_hint(&self) -> (usize, Option<usize>) {
-                let size = (self.end as usize - self.current as usize) / size_of::<T>();
+                #[allow(clippy::cast_sign_loss, reason = "It is impossible")]
+                let size = unsafe { self.end.offset_from(self.current) as usize };
 
                 (size, Some(size))
             }
         }
 
-        impl<T, const N: usize> ExactSizeIterator for Iter<'_, T, N> {
+        impl<T> ExactSizeIterator for Iter<'_, T> {
             fn len(&self) -> usize {
-                self.buffer.len
+                #[allow(clippy::cast_sign_loss, reason = "It is impossible")]
+                unsafe {
+                    self.end.offset_from(self.current) as usize
+                }
             }
         }
 
-        let current = (&raw const self.array[0]).cast();
+        let current = self.as_ptr();
+        let end = unsafe { current.add(self.len) };
 
         Iter {
-            buffer: self,
             current,
-            end: unsafe { current.add(self.len) },
+            end,
+            _marker: core::marker::PhantomData,
         }
     }
 
     /// Returns a mutable reference iterator over the buffer.
     pub fn iter_mut(&mut self) -> impl ExactSizeIterator<Item = &mut T> {
-        struct IterMut<'array_buffer, T, const N: usize> {
-            buffer: &'array_buffer mut ArrayBuffer<T, N>,
+        struct IterMut<'array_buffer, T> {
             current: *mut T,
             end: *mut T,
+            _marker: core::marker::PhantomData<&'array_buffer T>,
         }
 
-        impl<'array_buffer, T, const N: usize> Iterator for IterMut<'array_buffer, T, N> {
+        impl<'array_buffer, T> Iterator for IterMut<'array_buffer, T> {
             type Item = &'array_buffer mut T;
 
             fn next(&mut self) -> Option<Self::Item> {
                 if likely(self.current < self.end) {
                     let item = unsafe { &mut *self.current };
 
-                    unsafe {
-                        self.current = self.current.add(1);
-                    }
+                    self.current = unsafe { self.current.add(1) };
 
                     Some(item)
                 } else {
@@ -212,25 +213,29 @@ impl<T, const N: usize> ArrayBuffer<T, N> {
             }
 
             fn size_hint(&self) -> (usize, Option<usize>) {
-                let size = (self.end as usize - self.current as usize) / size_of::<T>();
+                #[allow(clippy::cast_sign_loss, reason = "It is impossible")]
+                let size = unsafe { self.end.offset_from(self.current) as usize };
 
                 (size, Some(size))
             }
         }
 
-        impl<T, const N: usize> ExactSizeIterator for IterMut<'_, T, N> {
+        impl<T> ExactSizeIterator for IterMut<'_, T> {
             fn len(&self) -> usize {
-                self.buffer.len
+                #[allow(clippy::cast_sign_loss, reason = "It is impossible")]
+                unsafe {
+                    self.end.offset_from(self.current) as usize
+                }
             }
         }
 
-        let current: *mut T = (&raw mut self.array[0]).cast();
+        let current = self.as_mut_ptr();
         let end = unsafe { current.add(self.len) };
 
         IterMut {
-            buffer: self,
             current,
             end,
+            _marker: core::marker::PhantomData,
         }
     }
 
@@ -300,6 +305,21 @@ impl<T, const N: usize> From<[T; N]> for ArrayBuffer<T, N> {
             array: unsafe { (&raw const array).cast::<[MaybeUninit<T>; N]>().read() },
             len: N,
         }
+    }
+}
+
+impl<T: Clone, const N: usize> Clone for ArrayBuffer<T, N> {
+    fn clone(&self) -> Self {
+        let mut res = Self {
+            array: [const { MaybeUninit::uninit() }; N],
+            len: self.len,
+        };
+
+        for (i, item) in self.as_ref().iter().enumerate() {
+            res.array[i] = MaybeUninit::new(item.clone());
+        }
+
+        res
     }
 }
 

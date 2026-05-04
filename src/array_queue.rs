@@ -4,8 +4,8 @@ use alloc::format;
 use core::error::Error;
 use core::fmt::{Display, Formatter};
 use core::mem::MaybeUninit;
-use core::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
-use core::{fmt, mem, ptr};
+use core::ptr::slice_from_raw_parts;
+use core::{fmt, mem, ptr, slice};
 
 /// `ArrayQueue` is a queue, but it uses an array on a stack and can't be resized.
 ///
@@ -170,7 +170,7 @@ impl<T, const N: usize> ArrayQueue<T, N> {
         if phys_tail > phys_head {
             (
                 unsafe {
-                    &mut *slice_from_raw_parts_mut(
+                    &mut *slice::from_raw_parts_mut(
                         self.array.as_mut_ptr().add(phys_head).cast(),
                         self.len,
                     )
@@ -178,16 +178,11 @@ impl<T, const N: usize> ArrayQueue<T, N> {
                 &mut [],
             )
         } else {
+            let ptr: *mut T = self.array.as_mut_ptr().cast();
+
             (
-                unsafe {
-                    &mut *slice_from_raw_parts_mut(
-                        self.array.as_mut_ptr().add(phys_head).cast(),
-                        N - phys_head,
-                    )
-                },
-                unsafe {
-                    &mut *slice_from_raw_parts_mut(self.array.as_mut_ptr().cast(), phys_tail)
-                },
+                unsafe { &mut *slice::from_raw_parts_mut(ptr.add(phys_head), N - phys_head) },
+                unsafe { &mut *slice::from_raw_parts_mut(ptr, phys_tail) },
             )
         }
     }
@@ -485,7 +480,7 @@ impl<T, const N: usize> ArrayQueue<T, N> {
             type Item = &'array_queue T;
 
             fn next(&mut self) -> Option<Self::Item> {
-                if self.iterated < self.queue.len {
+                if likely(self.iterated < self.queue.len) {
                     let idx = self.queue.to_physical_idx_from_head(self.iterated);
 
                     self.iterated += 1;
@@ -506,7 +501,7 @@ impl<T, const N: usize> ArrayQueue<T, N> {
 
         impl<T, const N: usize> ExactSizeIterator for Iter<'_, T, N> {
             fn len(&self) -> usize {
-                self.queue.len
+                self.queue.len - self.iterated
             }
         }
 
@@ -653,10 +648,9 @@ mod tests {
         }
 
         assert_eq!(queue.iter().collect::<Vec<_>>(), vec![&1, &2, &3, &4]);
-        assert_eq!(
-            queue.iter_mut().collect::<Vec<_>>(),
-            vec![&mut 1, &mut 2, &mut 3, &mut 4]
-        );
+
+        let v: Vec<_> = queue.iter_mut().map(|x| *x).collect();
+        assert_eq!(v, vec![1, 2, 3, 4]);
     }
 
     #[test]

@@ -306,7 +306,7 @@ cache_padded_atomic_number!(CachePaddedAtomicBool, AtomicBool, bool);
     clippy::doc_markdown,
     reason = "It is needed for right IDE doc formating"
 )]
-/// Alias to [`CachePadded`](CachePadded)`<`[`AtomicPtr`](AtomicPtr)`<T>>`.
+/// Alias to <code>[CachePadded](CachePadded)<[AtomicPtr](AtomicPtr)`<T>`></code>.
 pub struct CachePaddedAtomicPtr<T>(CachePadded<AtomicPtr<T>>);
 
 impl<T> CachePaddedAtomicPtr<T> {
@@ -314,7 +314,7 @@ impl<T> CachePaddedAtomicPtr<T> {
         clippy::doc_markdown,
         reason = "It is needed for right IDE doc formating"
     )]
-    /// Creates a new [`CachePadded`](CachePadded)`<`[`AtomicPtr`](AtomicPtr)`<T>>`.
+    /// Creates a new <code>[CachePadded](CachePadded)<[AtomicPtr](AtomicPtr)`<T>`></code>.
     #[inline(always)]
     pub const fn new(ptr: *mut T) -> Self {
         Self(CachePadded::new(AtomicPtr::new(ptr)))

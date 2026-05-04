@@ -12,6 +12,10 @@
 //! - The [`NumberKeyMap`] that is a compact open-addressing map specialized for `usize`
 //!   keys optimized for zero-misses and so optimized for 99+% reading operations.
 //! - The [`numa module`](numa) provides sufficient utilities for working with NUMA nodes.
+//! - The [`treap module`](treap) provides the [`Treap`](treap::Treap) — a randomized BST
+//!   with subtree-augmented filtering for efficient filtered min/max queries.
+//! - The [`cheap_random module`](cheap_random) provides fast non-cryptographic xorshift
+//!   PRNGs for `u32` and `u64`, both stateful and thread-local.
 //! - Configuration macros that are used to right compile the program based on the target platform
 //!   such as [`config_target_pointer_width_64`], [`config_target_pointer_width_32`], and
 //!   [`config_target_pointer_width_16`].
@@ -67,6 +71,7 @@ mod array_buffer;
 mod array_queue;
 pub mod backoff;
 pub mod cache_padded;
+pub mod cheap_random;
 mod clear_with;
 mod config_macro;
 pub mod hints;
@@ -75,6 +80,7 @@ mod instant;
 pub mod light_arc;
 pub mod numa;
 pub mod number_key_map;
+pub mod treap;
 mod vec_queue;
 
 pub use array_buffer::ArrayBuffer;
