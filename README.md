@@ -17,6 +17,11 @@ This repository provides utilities for building high-performance applications.
 - **[`vec_queue`](./src/vec_queue.rs)** — provides the [`VecQueue`](./src/vec_queue.rs) type,
   a vector-based queue implementation.
 - **[`numa`](./src/numa.rs)** — provides sufficient utilities for working with NUMA nodes.
+- **[`treap`](./src/treap.rs)** — provides the [`Treap`](./src/treap.rs) type, a randomized BST
+  with subtree-augmented filtering for efficient filtered min/max queries.
+- **[`cheap_random`](./src/cheap_random.rs)** — provides fast non-cryptographic xorshift PRNGs
+  for `u32` and `u64`, both stateful and thread-local. Thread-local variants are unavailable
+  with the `no_std` feature.
 - **[`config_macro`](./src/config_macro.rs)** — provides the `config_target_pointer_width_64`, 
     `config_target_pointer_width_32`, and `config_target_pointer_width_16` macros, 
   which are used to right compile the program based on the target platform.

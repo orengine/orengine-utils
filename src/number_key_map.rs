@@ -668,7 +668,7 @@ mod tests {
 
     #[test]
     fn test_number_key_map_insert_and_get() {
-        const N: usize = 1_000_000;
+        const N: usize = if !cfg!(miri) { 10_000 } else { 100 };
 
         let mut m = NumberKeyMap::new();
         let drops = Rc::new(Cell::new(0));
@@ -719,10 +719,12 @@ mod tests {
 
     #[test]
     fn test_number_key_map_clear() {
+        const N: usize = if !cfg!(miri) { 10_000 } else { 100 };
+
         let mut m = NumberKeyMap::new();
         let drops = Rc::new(Cell::new(0));
 
-        for i in 0..1_000_000 {
+        for i in 0..N {
             m.insert(i, DropCounter(i, drops.clone())).unwrap();
         }
 
@@ -730,11 +732,11 @@ mod tests {
 
         m.clear();
 
-        assert_eq!(drops.get(), 1_000_000);
+        assert_eq!(drops.get(), N);
 
         m.clear_with(|_| panic!("Not cleared"));
 
-        assert_eq!(drops.get(), 1_000_000);
+        assert_eq!(drops.get(), N);
     }
 
     #[test]

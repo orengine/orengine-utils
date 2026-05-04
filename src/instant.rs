@@ -1,6 +1,5 @@
 //! This module contains the [`OrengineInstant`].
 use std::fmt;
-use std::mem::MaybeUninit;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 use std::time::{Duration, Instant as StdInstant};
 
@@ -55,11 +54,7 @@ impl OrengineInstant {
         #[allow(clippy::cast_sign_loss, reason = "It can't be negative")]
         #[cfg(unix)]
         {
-            let mut ts_ = MaybeUninit::<libc::timespec>::uninit();
-            unsafe {
-                libc::clock_gettime(libc::CLOCK_MONOTONIC, ts_.as_mut_ptr());
-            }
-            let ts = unsafe { ts_.assume_init() };
+            let ts = rustix::time::clock_gettime(rustix::time::ClockId::Monotonic);
 
             Self {
                 instant: ts.tv_sec as u64 * 1_000_000_000 + ts.tv_nsec as u64,

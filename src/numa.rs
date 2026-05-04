@@ -109,7 +109,7 @@ impl<T: Default> Default for DataPerNUMANodeManager<T> {
 /// println!("Current thread is on NUMA node {}", node_id);
 /// ```
 pub fn get_current_thread_numa_node() -> usize {
-    #[cfg(target_os = "linux")]
+    #[cfg(all(target_os = "linux", not(miri)))]
     {
         use core::mem::MaybeUninit;
 
@@ -127,13 +127,13 @@ pub fn get_current_thread_numa_node() -> usize {
         unsafe { numa_node.assume_init() as usize }
     }
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(any(not(target_os = "linux"), miri))]
     {
         0
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(miri)))]
 mod tests {
     use super::*;
     use alloc::vec::Vec;
