@@ -25,9 +25,6 @@ This repository provides utilities for building high-performance applications.
 - **[`config_macro`](./src/config_macro.rs)** — provides the `config_target_pointer_width_64`, 
     `config_target_pointer_width_32`, and `config_target_pointer_width_16` macros, 
   which are used to right compile the program based on the target platform.
-- **[`number_key_map`](./src/number_key_map.rs)** This module provides the [`NumberKeyMap`](./src/number_key_map.rs) struct,
-  a compact open-addressing map specialized for `usize` keys optimized for zero-misses and so optimized 
-  for 99+% reading operations.
 
 # `no-std`
 

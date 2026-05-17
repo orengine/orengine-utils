@@ -9,8 +9,6 @@
 //! - The [`OrengineInstant`] that is a monotone clock that weights 8 bytes on Unix-like systems.
 //! - The [`ArrayQueue`] that is an array-based queue implementation.
 //! - The [`VecQueue`] that is a vector-based queue implementation.
-//! - The [`NumberKeyMap`] that is a compact open-addressing map specialized for `usize`
-//!   keys optimized for zero-misses and so optimized for 99+% reading operations.
 //! - The [`numa module`](numa) provides sufficient utilities for working with NUMA nodes.
 //! - The [`treap module`](treap) provides the [`Treap`](treap::Treap) — a randomized BST
 //!   with subtree-augmented filtering for efficient filtered min/max queries.
@@ -79,7 +77,6 @@ pub mod hints;
 mod instant;
 pub mod light_arc;
 pub mod numa;
-pub mod number_key_map;
 pub mod treap;
 mod vec_queue;
 
@@ -88,6 +85,4 @@ pub use array_queue::ArrayQueue;
 pub use clear_with::*;
 #[cfg(not(feature = "no_std"))]
 pub use instant::OrengineInstant;
-#[cfg(not(feature = "no_std"))]
-pub use number_key_map::NumberKeyMap;
 pub use vec_queue::VecQueue;
