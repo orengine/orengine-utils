@@ -23,9 +23,7 @@ impl OrengineInstant {
     /// It panics if it is called not on `unix`.
     #[cfg(unix)]
     pub fn from_u64(instant: u64) -> Self {
-        if cfg!(not(unix)) {
-            panic!("`from_u64` can be called only on UNIX.");
-        }
+        assert!(cfg!(unix), "`from_u64` can be called only on UNIX.");
 
         Self { instant }
     }
@@ -37,9 +35,7 @@ impl OrengineInstant {
     /// It panics if it is called not on `unix`.
     #[cfg(unix)]
     pub fn into_u64(self) -> u64 {
-        if cfg!(not(unix)) {
-            panic!("`into_u64` can be called only on UNIX.");
-        }
+        assert!(cfg!(unix), "`into_u64` can be called only on UNIX.");
 
         self.instant
     }

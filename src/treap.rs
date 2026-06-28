@@ -1792,7 +1792,7 @@ mod tests {
                 treap.add(TestEntry::new(
                     i,
                     generate_filtering_key(i),
-                    &format!("item_{}", i),
+                    &format!("item_{i}"),
                 ));
             };
 
@@ -1800,7 +1800,7 @@ mod tests {
 
             assert_eq!(item.primary, i);
             assert_eq!(item.filter, generate_filtering_key(i));
-            assert_eq!(&item.value, &format!("item_{}", i));
+            assert_eq!(&item.value, &format!("item_{i}"));
         }
 
         for i in 0..100 {
@@ -1808,7 +1808,7 @@ mod tests {
 
             assert_eq!(item.primary, i);
             assert_eq!(item.filter, generate_filtering_key(i));
-            assert_eq!(&item.value, &format!("item_{}", i));
+            assert_eq!(&item.value, &format!("item_{i}"));
         }
 
         for i in 0..100 {
@@ -1817,26 +1817,26 @@ mod tests {
                 treap.set(TestEntry::new(
                     i,
                     generate_filtering_key(i + delta),
-                    &format!("updated_item_{}", i),
+                    &format!("updated_item_{i}"),
                 ));
 
                 let item = treap.find(&i).unwrap();
 
                 assert_eq!(item.primary, i);
                 assert_eq!(item.filter, generate_filtering_key(i + delta));
-                assert_eq!(&item.value, &format!("updated_item_{}", i));
+                assert_eq!(&item.value, &format!("updated_item_{i}"));
             } else {
                 let entry = treap.remove_by_sorting_key(&i).unwrap();
 
                 assert_eq!(entry.primary, i);
                 assert_eq!(entry.filter, generate_filtering_key(i));
-                assert_eq!(&entry.value, &format!("item_{}", i));
+                assert_eq!(&entry.value, &format!("item_{i}"));
             }
 
             treap.validate();
         }
 
-        println!("{}", treap);
+        println!("{treap}");
     }
 
     #[test]
@@ -2027,7 +2027,7 @@ mod tests {
 
         // endregion
 
-        println!("Treap now: \n{}", treap);
+        println!("Treap now: \n{treap}");
 
         // Treap now:
         // (17, 1)
@@ -2123,8 +2123,10 @@ mod tests {
         for _ in 0..10 {
             let mut key_value_pairs = std::collections::HashMap::with_capacity(N);
             let mut tree = Treap::new();
+            #[allow(clippy::cast_possible_truncation, reason = "False positive.")]
+            #[allow(clippy::cast_possible_wrap, reason = "False positive.")]
             let mut rand_i32 =
-                || cheap_random_with_current_u32(&mut state) as i32 % (N * 9 / 10) as i32;
+                || cheap_random_with_current_u32(&mut state).cast_signed() % (N as i32 * 9 / 10);
 
             for i in 0..N {
                 let key = rand_i32();
@@ -2183,8 +2185,8 @@ mod tests {
         use core::cell::Cell;
 
         thread_local! {
-            static SORTING_KEY_DROP_COUNTER: Cell<usize> = Cell::new(0);
-            static VALUE_DROP_COUNTER: Cell<usize> = Cell::new(0);
+            static SORTING_KEY_DROP_COUNTER: Cell<usize> = const { Cell::new(0) };
+            static VALUE_DROP_COUNTER: Cell<usize> = const { Cell::new(0) };
         }
 
         #[derive(Eq, PartialEq, Ord, PartialOrd)]

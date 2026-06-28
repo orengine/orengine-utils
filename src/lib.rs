@@ -77,7 +77,12 @@ pub mod hints;
 mod instant;
 pub mod light_arc;
 pub mod numa;
+#[cfg(not(feature = "no_std"))]
+pub mod rw_serde;
+mod small_string;
 pub mod treap;
+#[cfg(not(feature = "no_std"))]
+pub mod varint;
 mod vec_queue;
 
 pub use array_buffer::ArrayBuffer;
@@ -85,4 +90,5 @@ pub use array_queue::ArrayQueue;
 pub use clear_with::*;
 #[cfg(not(feature = "no_std"))]
 pub use instant::OrengineInstant;
+pub use small_string::*;
 pub use vec_queue::VecQueue;

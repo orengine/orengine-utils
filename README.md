@@ -25,6 +25,13 @@ This repository provides utilities for building high-performance applications.
 - **[`config_macro`](./src/config_macro.rs)** — provides the `config_target_pointer_width_64`, 
     `config_target_pointer_width_32`, and `config_target_pointer_width_16` macros, 
   which are used to right compile the program based on the target platform.
+- **[`rw_serde`](./src/rw_serde)** — provides the `Serializer` and `Deserializer` types, which are used to serialize and
+  deserialize values directly to and from any type implementing
+  [`std::io::Write`] and [`std::io::Read`].
+- **[`small_string`](./src/small_string.rs)** — provides the [`SmallString`](./src/small_string.rs) type, a string type
+  that can store small strings on the stack.
+- **[`varint`](./src/varint.rs)** — provides the [`Varint`](./src/varint.rs) type, a variable-length integer encoding
+  for efficient serialization.
 
 # `no-std`
 
