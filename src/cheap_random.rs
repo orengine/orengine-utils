@@ -67,9 +67,7 @@ pub fn cheap_random_u32() -> u32 {
 
     thread_local! {
         static RNG: Cell<NonZeroU32> = const {
-            Cell::new(unsafe {
-                NonZeroU32::new_unchecked(451_842_549)
-            })
+            Cell::new(NonZeroU32::new(451_842_549).unwrap())
         };
     }
 
@@ -126,9 +124,7 @@ pub fn cheap_random_u64() -> u64 {
 
     thread_local! {
         static RNG: Cell<NonZeroU64> = const {
-            Cell::new(unsafe {
-                NonZeroU64::new_unchecked(7_948_160_987_894_135_694)
-            })
+            Cell::new(NonZeroU64::new(7_948_160_987_894_135_694).unwrap())
         };
     }
 
