@@ -15,7 +15,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-          toolchain: 1.83.0
+          toolchain: 1.87.0
       - name: Clippy (x86)
         run: cargo clippy --all-targets --all-features -- -D warnings
       - name: Test (x86) default
