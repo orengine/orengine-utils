@@ -36,4 +36,4 @@ This repository provides utilities for building high-performance applications.
 # `no-std`
 
 It provides the `no_std` feature, that makes it use `core` and `alloc` crates instead of `std`.
-With this feature, this crate provides almost all the functionality. It excludes the `instant` module.
+With this feature, this crate provides almost all the functionality. It excludes the `instant` and `rw_serde` modules.
