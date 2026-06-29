@@ -621,11 +621,12 @@ mod tests {
         };
 
         let mut ser = serializer();
-        obj.serialize(&mut ser).unwrap();
+        let written = obj.serialize(&mut ser).unwrap();
 
         let buf = ser.into_inner();
 
         assert_eq!(buf.len(), 52);
+        assert_eq!(buf.len(), written);
 
         let mut de = RWDeserializer::new(Cursor::new(buf));
         let deserialized = A::deserialize(&mut de).unwrap();
@@ -645,11 +646,12 @@ mod tests {
         };
 
         let mut ser = serializer();
-        obj.serialize(&mut ser).unwrap();
+        let written = obj.serialize(&mut ser).unwrap();
 
         let buf = ser.into_inner();
 
         assert_eq!(buf.len(), 14);
+        assert_eq!(buf.len(), written);
 
         let mut de = RWDeserializer::new(Cursor::new(buf));
         let out = A::deserialize(&mut de).unwrap();
@@ -674,11 +676,12 @@ mod tests {
         };
 
         let mut ser = serializer();
-        obj.serialize(&mut ser).unwrap();
+        let written = obj.serialize(&mut ser).unwrap();
 
         let buf = ser.into_inner();
 
         assert_eq!(buf.len(), 6 + 23);
+        assert_eq!(buf.len(), written);
 
         let mut de = RWDeserializer::new(Cursor::new(buf));
         let out = A::deserialize(&mut de).unwrap();
@@ -704,11 +707,12 @@ mod tests {
         };
 
         let mut ser = serializer();
-        obj.serialize(&mut ser).unwrap();
+        let written = obj.serialize(&mut ser).unwrap();
 
         let buf = ser.into_inner();
 
         assert_eq!(buf.len(), 11);
+        assert_eq!(buf.len(), written);
 
         let mut de = RWDeserializer::new(Cursor::new(buf));
         let out = A::deserialize(&mut de).unwrap();
@@ -742,11 +746,12 @@ mod tests {
         };
 
         let mut ser = serializer();
-        obj.serialize(&mut ser).unwrap();
+        let written = obj.serialize(&mut ser).unwrap();
 
         let buf = ser.into_inner();
 
         assert_eq!(buf.len(), 14);
+        assert_eq!(buf.len(), written);
 
         let mut de = RWDeserializer::new(Cursor::new(buf));
         let out = Outer::deserialize(&mut de).unwrap();
@@ -762,11 +767,12 @@ mod tests {
         let obj = A(123, "hello".into(), true);
 
         let mut ser = serializer();
-        obj.serialize(&mut ser).unwrap();
+        let written = obj.serialize(&mut ser).unwrap();
 
         let buf = ser.into_inner();
 
         assert_eq!(buf.len(), 8);
+        assert_eq!(buf.len(), written);
 
         let mut de = RWDeserializer::new(Cursor::new(buf));
         let out = A::deserialize(&mut de).unwrap();
@@ -782,11 +788,12 @@ mod tests {
         let obj = Id(999);
 
         let mut ser = serializer();
-        obj.serialize(&mut ser).unwrap();
+        let written = obj.serialize(&mut ser).unwrap();
 
         let buf = ser.into_inner();
 
         assert_eq!(buf.len(), 2);
+        assert_eq!(buf.len(), written);
 
         let mut de = RWDeserializer::new(Cursor::new(buf));
         let out = Id::deserialize(&mut de).unwrap();
@@ -802,11 +809,12 @@ mod tests {
         let obj = Marker;
 
         let mut ser = serializer();
-        obj.serialize(&mut ser).unwrap();
+        let written = obj.serialize(&mut ser).unwrap();
 
         let buf = ser.into_inner();
 
         assert_eq!(buf.len(), 0);
+        assert_eq!(buf.len(), written);
 
         let mut de = RWDeserializer::new(Cursor::new(buf));
         let out = Marker::deserialize(&mut de).unwrap();
@@ -839,11 +847,12 @@ mod tests {
 
         for (value, expected_size) in values {
             let mut ser = serializer();
-            value.serialize(&mut ser).unwrap();
+            let written = value.serialize(&mut ser).unwrap();
 
             let buf = ser.into_inner();
 
             assert_eq!(buf.len(), expected_size);
+            assert_eq!(buf.len(), written);
 
             let mut de = RWDeserializer::new(Cursor::new(buf));
             let out = E::deserialize(&mut de).unwrap();
@@ -857,11 +866,12 @@ mod tests {
         let obj = [1u16, 2, 3, 4, 5];
 
         let mut ser = serializer();
-        obj.serialize(&mut ser).unwrap();
+        let written = obj.serialize(&mut ser).unwrap();
 
         let buf = ser.into_inner();
 
         assert_eq!(buf.len(), 5);
+        assert_eq!(buf.len(), written);
 
         let mut de = RWDeserializer::new(Cursor::new(buf));
         let out = <[u16; 5]>::deserialize(&mut de).unwrap();
@@ -886,11 +896,12 @@ mod tests {
         let obj = A { map };
 
         let mut ser = serializer();
-        obj.serialize(&mut ser).unwrap();
+        let written = obj.serialize(&mut ser).unwrap();
 
         let buf = ser.into_inner();
 
         assert_eq!(buf.len(), 1 + 5 + 5 + 7);
+        assert_eq!(buf.len(), written);
 
         let mut de = RWDeserializer::new(Cursor::new(buf));
         let out = A::deserialize(&mut de).unwrap();
@@ -915,11 +926,12 @@ mod tests {
         let obj = A { map };
 
         let mut ser = serializer();
-        obj.serialize(&mut ser).unwrap();
+        let written = obj.serialize(&mut ser).unwrap();
 
         let buf = ser.into_inner();
 
         assert_eq!(buf.len(), 1 + 5 + 5 + 7);
+        assert_eq!(buf.len(), written);
 
         let mut de = RWDeserializer::new(Cursor::new(buf));
         let out = A::deserialize(&mut de).unwrap();
@@ -944,11 +956,12 @@ mod tests {
         let obj = A { values };
 
         let mut ser = serializer();
-        obj.serialize(&mut ser).unwrap();
+        let written = obj.serialize(&mut ser).unwrap();
 
         let buf = ser.into_inner();
 
         assert_eq!(buf.len(), 4);
+        assert_eq!(buf.len(), written);
 
         let mut de = RWDeserializer::new(Cursor::new(buf));
         let out = A::deserialize(&mut de).unwrap();
@@ -970,11 +983,12 @@ mod tests {
         };
 
         let mut ser = serializer();
-        obj.serialize(&mut ser).unwrap();
+        let written = obj.serialize(&mut ser).unwrap();
 
         let buf = ser.into_inner();
 
         assert_eq!(buf.len(), 5);
+        assert_eq!(buf.len(), written);
 
         let mut de = RWDeserializer::new(Cursor::new(buf));
         let out = A::deserialize(&mut de).unwrap();
