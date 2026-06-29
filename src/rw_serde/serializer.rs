@@ -196,14 +196,15 @@ impl<'s, Dst: Write> serde::Serializer for &'s mut RWSerializer<Dst> {
     }
 
     fn serialize_str(self, v: &str) -> Result<Self::Ok, Self::Error> {
-        self.destination
+        let written = self
+            .destination
             .write_varint(v.len() as u64)
             .map_err(SerializeError::IO)?;
         self.destination
             .write_all(v.as_bytes())
             .map_err(SerializeError::IO)?;
 
-        Ok(4 + v.len())
+        Ok(written + v.len())
     }
 
     fn serialize_bytes(self, v: &[u8]) -> Result<Self::Ok, Self::Error> {
