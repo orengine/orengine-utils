@@ -17,7 +17,7 @@ use core::fmt;
 use core::fmt::Display;
 use core::mem;
 use core::num::NonZeroU32;
-use core::ops::{Deref, DerefMut};
+use core::ops::Deref;
 use core::ptr::NonNull;
 
 /// Trait for entries that can be stored in a [`Treap`].
@@ -105,12 +105,6 @@ impl<E: TreapEntry> Node<E> {
     #[inline]
     fn entry(&self) -> &E {
         &self.entry
-    }
-
-    /// Returns a mutable reference to the entry.
-    #[inline]
-    fn entry_mut(&mut self) -> &mut E {
-        &mut self.entry
     }
 
     /// Returns an iterator over nodes reachable from `self` whose
@@ -309,12 +303,6 @@ impl<E: TreapEntry> Deref for Node<E> {
     }
 }
 
-impl<E: TreapEntry> DerefMut for Node<E> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.entry_mut()
-    }
-}
-
 /// A treap (tree and heap) data structure combining a binary search tree with randomized
 /// heap-based balancing.
 ///
@@ -395,7 +383,7 @@ impl<E: TreapEntry> NodeMut<'_, E> {
     pub fn value_mut(&mut self) -> &mut E::Value {
         let node = unsafe { self.node_ptr.as_mut() };
 
-        node.value_mut()
+        node.entry.value_mut()
     }
 
     /// Removes this node from the associated [`Treap`].
