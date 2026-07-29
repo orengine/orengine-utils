@@ -9,10 +9,6 @@
 //! regular UTF-8 string.
 
 use alloc::string::String;
-#[cfg(not(feature = "no_std"))]
-use core::fmt;
-#[cfg(not(feature = "no_std"))]
-use core::fmt::Formatter;
 use core::ops::Deref;
 #[cfg(not(feature = "no_std"))]
 use serde::de::{Error, Visitor};
@@ -25,7 +21,7 @@ use smallvec::SmallVec;
 /// While the length is less or equal to `INLINE_SIZE`, the string is stored
 /// inline on a stack. When the length exceeds this limit, the string spills
 /// to the heap.
-#[derive(Clone, Eq, PartialEq, Hash, PartialOrd, Ord, Debug)]
+#[derive(Clone, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub struct SmallString<const INLINE_SIZE: usize>(SmallVec<u8, INLINE_SIZE>);
 
 impl<const INLINE_SIZE: usize> SmallString<INLINE_SIZE> {
@@ -109,7 +105,7 @@ impl<'de, const INLINE_SIZE: usize> Deserialize<'de> for SmallString<INLINE_SIZE
         impl<const INLINE_SIZE: usize> Visitor<'_> for SmallStringVisitor<INLINE_SIZE> {
             type Value = SmallString<INLINE_SIZE>;
 
-            fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
                 formatter.write_str("a UTF-8 string")
             }
 
@@ -135,7 +131,7 @@ impl<'de, const INLINE_SIZE: usize> Deserialize<'de> for SmallString<INLINE_SIZE
         impl<const INLINE_SIZE: usize> Visitor<'_> for SmallStringVisitorRef<'_, INLINE_SIZE> {
             type Value = ();
 
-            fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
                 formatter.write_str("a UTF-8 string")
             }
 
@@ -153,6 +149,18 @@ impl<'de, const INLINE_SIZE: usize> Deserialize<'de> for SmallString<INLINE_SIZE
         deserializer.deserialize_str(SmallStringVisitorRef(place))?;
 
         Ok(())
+    }
+}
+
+impl<const INLINE_SIZE: usize> core::fmt::Debug for SmallString<INLINE_SIZE> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}", *self)
+    }
+}
+
+impl<const INLINE_SIZE: usize> core::fmt::Display for SmallString<INLINE_SIZE> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}", &**self)
     }
 }
 
